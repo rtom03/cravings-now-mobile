@@ -1,0 +1,2639 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>CravingsNow — App Design</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #1b1b1f;
+        --paper: #f7f6f3;
+        --surface: #ffffff;
+        --signal: #e63462;
+        --signal-dark: #c21f49;
+        --support: #0f5257;
+        --success: #4c9a6a;
+        --warn: #e8a33d;
+        --n600: #6e6e76;
+        --n300: #b9b7b2;
+        --n200: #e7e4de;
+        --n100: #f1efea;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: #eae8e3;
+        font-family: "Inter", sans-serif;
+        color: var(--ink);
+        -webkit-font-smoothing: antialiased;
+      }
+      .canvas {
+        padding: 56px 40px 100px;
+      }
+      .canvas-title {
+        font-family: "Space Grotesk", sans-serif;
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--n600);
+        letter-spacing: 0.01em;
+        margin-bottom: 36px;
+      }
+      .board {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 56px;
+      }
+      .frame-group {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .frame-label {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--n600);
+        margin-bottom: 12px;
+      }
+      .frame {
+        width: 300px;
+        height: 648px;
+        background: var(--paper);
+        border-radius: 34px;
+        overflow: hidden;
+        position: relative;
+        box-shadow:
+          0 24px 48px rgba(20, 18, 15, 0.16),
+          0 2px 6px rgba(20, 18, 15, 0.08);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+      }
+      .statusbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 22px 4px;
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--ink);
+        flex-shrink: 0;
+      }
+      .statusbar .icons {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+      }
+      .sb-bars {
+        display: flex;
+        gap: 2px;
+        align-items: flex-end;
+        height: 9px;
+      }
+      .sb-bars span {
+        width: 3px;
+        background: var(--ink);
+        border-radius: 1px;
+      }
+      .sb-bars span:nth-child(1) {
+        height: 4px;
+      }
+      .sb-bars span:nth-child(2) {
+        height: 6px;
+      }
+      .sb-bars span:nth-child(3) {
+        height: 8px;
+      }
+      .sb-bars span:nth-child(4) {
+        height: 9px;
+      }
+      .sb-batt {
+        width: 20px;
+        height: 10px;
+        border: 1.4px solid var(--ink);
+        border-radius: 2.5px;
+        position: relative;
+      }
+      .sb-batt::after {
+        content: "";
+        position: absolute;
+        right: -3.5px;
+        top: 2.5px;
+        width: 2px;
+        height: 4px;
+        background: var(--ink);
+        border-radius: 0 1px 1px 0;
+      }
+      .sb-batt::before {
+        content: "";
+        position: absolute;
+        top: 1.2px;
+        left: 1.2px;
+        bottom: 1.2px;
+        width: 12px;
+        background: var(--ink);
+        border-radius: 1px;
+      }
+
+      .screen {
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+      }
+      svg.icon {
+        width: 19px;
+        height: 19px;
+        display: block;
+      }
+
+      /* ---------- COVER ---------- */
+      .cover {
+        background: var(--ink);
+        color: var(--paper);
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 36px;
+      }
+      .cover .mark {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: var(--signal);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: "Space Grotesk", sans-serif;
+        font-weight: 700;
+        font-size: 26px;
+        color: #fff;
+        margin: 0 auto 20px;
+      }
+      .cover h1 {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 27px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+      .cover p {
+        margin-top: 9px;
+        color: var(--n300);
+        font-size: 13px;
+        max-width: 220px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      .cover .swatches {
+        display: flex;
+        gap: 10px;
+        margin-top: 28px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .swatch-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+      }
+      .swatch-item .chip {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+      }
+      .swatch-item .hex {
+        font-size: 8.5px;
+        color: var(--n300);
+        font-family: "Space Grotesk", sans-serif;
+        letter-spacing: 0.01em;
+      }
+      .cover .type-spec {
+        margin-top: 26px;
+        text-align: left;
+        width: 100%;
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        padding-top: 18px;
+      }
+      .cover .type-spec .row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        color: var(--n300);
+        padding: 4px 0;
+      }
+      .cover .type-spec .row b {
+        color: #fff;
+        font-weight: 500;
+      }
+
+      /* ---------- SHARED UI BITS ---------- */
+      .greeting {
+        padding: 14px 20px 6px;
+      }
+      .greeting .hello {
+        font-size: 13px;
+        color: var(--n600);
+      }
+      .greeting .place {
+        font-family: "Space Grotesk", sans-serif;
+        font-weight: 600;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 2px;
+      }
+      .search-bar {
+        margin: 12px 20px 14px;
+        background: var(--surface);
+        border-radius: 14px;
+        padding: 11px 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--n200);
+        color: var(--n600);
+        font-size: 13px;
+      }
+      .page-header {
+        padding: 16px 20px 8px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-family: "Space Grotesk", sans-serif;
+        font-weight: 600;
+        font-size: 17px;
+      }
+      .chips {
+        display: flex;
+        gap: 8px;
+        padding: 0 20px 16px;
+        overflow: hidden;
+      }
+      .chip {
+        flex-shrink: 0;
+        padding: 7px 13px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        background: var(--surface);
+        border: 1px solid var(--n200);
+        color: var(--ink);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .chip.active {
+        background: var(--support);
+        color: #fff;
+        border-color: var(--support);
+      }
+      .banner {
+        margin: 0 20px 22px;
+        border-radius: 18px;
+        padding: 18px;
+        background: linear-gradient(135deg, var(--signal), var(--signal-dark));
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+      }
+      .banner b {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 15px;
+        display: block;
+      }
+      .banner span {
+        font-size: 11.5px;
+        opacity: 0.9;
+        display: block;
+        margin-top: 4px;
+        max-width: 160px;
+      }
+      .banner .deco {
+        position: absolute;
+        right: -14px;
+        top: -14px;
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.14);
+      }
+
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding: 0 20px 10px;
+      }
+      .section-head h3 {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 14.5px;
+        font-weight: 600;
+      }
+      .section-head a {
+        font-size: 11.5px;
+        color: var(--n600);
+        font-weight: 600;
+      }
+
+      .r-card {
+        display: flex;
+        gap: 12px;
+        padding: 0 20px 16px;
+        align-items: center;
+      }
+      .thumb {
+        width: 64px;
+        height: 64px;
+        border-radius: 14px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+      }
+      .r-info b {
+        font-size: 13.5px;
+        font-weight: 600;
+        display: block;
+      }
+      .r-info .meta {
+        font-size: 11px;
+        color: var(--n600);
+        margin-top: 3px;
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .r-info .meta .dot {
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: var(--n300);
+      }
+      .rating {
+        color: var(--warn);
+        font-weight: 600;
+      }
+
+      .bottomnav {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--surface);
+        border-top: 1px solid var(--n200);
+        display: flex;
+        justify-content: space-around;
+        padding: 12px 10px 22px;
+      }
+      .navitem {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: var(--n300);
+      }
+      .navitem.active {
+        color: var(--signal);
+      }
+      .navitem span {
+        font-size: 9.5px;
+        font-weight: 600;
+      }
+
+      /* ---------- BRAND LIST (Brands tab) ---------- */
+      .brand-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--n100);
+      }
+      .brand-logo {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        flex-shrink: 0;
+      }
+      .brand-info {
+        flex: 1;
+      }
+      .brand-info b {
+        font-size: 14px;
+        display: block;
+      }
+      .brand-info .meta {
+        font-size: 11px;
+        color: var(--n600);
+        margin-top: 3px;
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .brand-row .chev {
+        color: var(--n300);
+        font-size: 18px;
+      }
+
+      .h-scroll {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+        padding: 0 20px 22px;
+        scrollbar-width: none;
+      }
+      .h-scroll::-webkit-scrollbar {
+        display: none;
+      }
+      .prod-card {
+        flex: 0 0 128px;
+        background: var(--surface);
+        border: 1px solid var(--n200);
+        border-radius: 16px;
+        padding: 10px;
+        position: relative;
+      }
+      .prod-card .thumb-lg {
+        width: 100%;
+        height: 74px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        margin-bottom: 8px;
+      }
+      .prod-card b {
+        font-size: 12px;
+        display: block;
+        line-height: 1.25;
+      }
+      .prod-card .brand-tag {
+        font-size: 9.5px;
+        color: var(--n600);
+        margin-top: 3px;
+        display: block;
+      }
+      .prod-card .price {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 12px;
+        font-weight: 600;
+        margin-top: 7px;
+      }
+      .badge {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        background: rgba(255, 255, 255, 0.92);
+        border-radius: 8px;
+        padding: 2px 6px;
+        font-size: 12px;
+        line-height: 1;
+      }
+
+      /* ---------- RESTAURANT / MENU SCREEN ---------- */
+      .hero {
+        height: 190px;
+        background: linear-gradient(135deg, #f3b94a, #e6653a);
+        position: relative;
+        flex-shrink: 0;
+      }
+      .hero .top-icons {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        right: 16px;
+        display: flex;
+        justify-content: space-between;
+      }
+      .round-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.92);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--ink);
+      }
+      .r-header {
+        padding: 16px 20px 4px;
+      }
+      .r-header h2 {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 19px;
+      }
+      .r-header .tags {
+        font-size: 12px;
+        color: var(--n600);
+        margin-top: 4px;
+      }
+      .fulfillment-tabs {
+        margin: 14px 20px 0;
+        display: flex;
+        background: var(--n100);
+        border-radius: 12px;
+        padding: 4px;
+      }
+      .fulfillment-tab {
+        flex: 1;
+        text-align: center;
+        padding: 8px 0;
+        border-radius: 9px;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--n600);
+      }
+      .fulfillment-tab.active {
+        background: var(--surface);
+        color: var(--ink);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      }
+      .info-strip {
+        margin: 14px 20px;
+        display: flex;
+        justify-content: space-between;
+        background: var(--n100);
+        border-radius: 14px;
+        padding: 12px 16px;
+      }
+      .info-strip .col {
+        text-align: center;
+      }
+      .info-strip .col b {
+        display: block;
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 13px;
+      }
+      .info-strip .col span {
+        font-size: 10px;
+        color: var(--n600);
+      }
+      .tabs {
+        display: flex;
+        gap: 20px;
+        padding: 2px 20px 12px;
+        border-bottom: 1px solid var(--n200);
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--n600);
+      }
+      .tabs .tab-active {
+        color: var(--ink);
+        position: relative;
+      }
+      .tabs .tab-active::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -13px;
+        height: 2px;
+        background: var(--signal);
+      }
+
+      .menu-item {
+        display: flex;
+        gap: 12px;
+        padding: 16px 20px;
+        align-items: center;
+        border-bottom: 1px solid var(--n100);
+      }
+      .menu-item .mi-info {
+        flex: 1;
+      }
+      .menu-item .mi-info b {
+        font-size: 13px;
+      }
+      .menu-item .mi-info p {
+        font-size: 11px;
+        color: var(--n600);
+        margin-top: 3px;
+        line-height: 1.4;
+      }
+      .menu-item .mi-price {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 12.5px;
+        font-weight: 600;
+        margin-top: 6px;
+      }
+      .add-btn {
+        width: 26px;
+        height: 26px;
+        border-radius: 8px;
+        background: var(--ink);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .cart-bar {
+        position: absolute;
+        left: 16px;
+        right: 16px;
+        bottom: 16px;
+        background: var(--support);
+        color: #fff;
+        border-radius: 16px;
+        padding: 14px 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12.5px;
+        font-weight: 600;
+        box-shadow: 0 10px 24px rgba(15, 82, 87, 0.35);
+      }
+
+      /* ---------- ITEM DETAIL SHEET ---------- */
+      .sheet-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(27, 27, 31, 0.45);
+      }
+      .sheet-panel {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: 28px;
+        background: var(--surface);
+        border-radius: 24px 24px 0 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.18);
+      }
+      .sheet-handle {
+        width: 36px;
+        height: 4px;
+        border-radius: 3px;
+        background: var(--n200);
+        margin: 10px auto 2px;
+        flex-shrink: 0;
+      }
+      .sheet-close {
+        position: absolute;
+        top: 14px;
+        left: 14px;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: var(--n100);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+        color: var(--ink);
+      }
+      .sheet-scroll {
+        flex: 1;
+        overflow-y: auto;
+        padding-bottom: 88px;
+      }
+      .sheet-hero {
+        height: 130px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 56px;
+      }
+      .discount-pill {
+        display: inline-flex;
+        background: var(--signal);
+        color: #fff;
+        font-size: 10.5px;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 7px;
+        margin: 14px 20px 8px;
+      }
+      .sheet-title {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 18px;
+        font-weight: 700;
+        padding: 0 20px;
+      }
+      .price-row {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        padding: 6px 20px 0;
+      }
+      .price-now {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .price-was {
+        font-size: 12px;
+        color: var(--n300);
+        text-decoration: line-through;
+      }
+      .includes {
+        padding: 12px 20px 16px;
+      }
+      .include-row {
+        font-size: 11.5px;
+        color: var(--n600);
+        line-height: 1.9;
+      }
+      .sheet-divider {
+        height: 8px;
+        background: var(--n100);
+      }
+      .option-head-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 16px 20px 2px;
+      }
+      .option-head-title {
+        font-size: 13.5px;
+        font-weight: 700;
+      }
+      .option-head-sub {
+        font-size: 11px;
+        color: var(--n600);
+        margin-top: 3px;
+      }
+      .required-pill {
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--n600);
+        background: var(--n100);
+        padding: 4px 9px;
+        border-radius: 7px;
+        flex-shrink: 0;
+      }
+      .option-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 13px 20px;
+        border-bottom: 1px solid var(--n100);
+      }
+      .option-row b {
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--ink);
+      }
+      .option-add {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: 1.5px solid var(--n200);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--n600);
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+      .option-add.selected {
+        background: var(--signal);
+        border-color: var(--signal);
+        color: #fff;
+      }
+      .qty-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        padding: 20px 20px 4px;
+      }
+      .qty-row .step-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 9px;
+      }
+      .qty-row span {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 15px;
+        font-weight: 700;
+      }
+      .sheet-cta {
+        position: absolute;
+        left: 16px;
+        right: 16px;
+        bottom: 16px;
+        background: var(--signal);
+        color: #fff;
+        text-align: center;
+        padding: 15px;
+        border-radius: 16px;
+        font-weight: 700;
+        font-size: 13.5px;
+        box-shadow: 0 10px 24px rgba(230, 52, 98, 0.35);
+      }
+
+      /* ---------- DELIVERY ADDRESS ---------- */
+      .addr-map {
+        height: 230px;
+        flex-shrink: 0;
+        position: relative;
+        overflow: hidden;
+        background:
+          linear-gradient(var(--n200) 1px, transparent 1px) 0 0/26px 26px,
+          linear-gradient(90deg, var(--n200) 1px, transparent 1px) 0 0/26px 26px,
+          var(--n100);
+      }
+      .addr-close {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+      }
+      .addr-locate-btn {
+        position: absolute;
+        right: 16px;
+        bottom: 38px;
+      }
+      .addr-pin-label {
+        position: absolute;
+        left: 50%;
+        top: 70px;
+        transform: translateX(-50%);
+        background: var(--ink);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 6px 12px;
+        border-radius: 10px;
+        white-space: nowrap;
+      }
+      .addr-pin-badge {
+        position: absolute;
+        left: 50%;
+        top: 100px;
+        transform: translateX(-50%);
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        background: var(--surface);
+        border: 3px solid var(--support);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+      }
+      .addr-grabber {
+        position: absolute;
+        left: 50%;
+        bottom: 10px;
+        transform: translateX(-50%);
+        width: 44px;
+        height: 5px;
+        border-radius: 3px;
+        background: rgba(0, 0, 0, 0.15);
+      }
+      .addr-sheet {
+        flex: 1;
+        background: var(--surface);
+        border-radius: 24px 24px 0 0;
+        margin-top: -20px;
+        position: relative;
+        padding: 22px 20px 20px;
+        overflow-y: auto;
+      }
+      .addr-title {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 19px;
+        font-weight: 700;
+        margin-bottom: 16px;
+      }
+      .addr-row {
+        display: flex;
+        gap: 12px;
+        padding: 14px 0;
+        border-bottom: 1px solid var(--n100);
+        align-items: flex-start;
+      }
+      .addr-row .addr-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: var(--n100);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        color: var(--ink);
+      }
+      .addr-row .addr-info {
+        flex: 1;
+      }
+      .addr-row .addr-info b {
+        font-size: 13.5px;
+        display: block;
+      }
+      .addr-row .addr-info span {
+        font-size: 11.5px;
+        color: var(--n600);
+        margin-top: 2px;
+        display: block;
+      }
+      .addr-warning {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: #fbf1de;
+        color: #9a6b1e;
+        font-size: 10.5px;
+        font-weight: 600;
+        padding: 5px 9px;
+        border-radius: 8px;
+        margin-top: 7px;
+      }
+      .addr-edit-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: var(--n100);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--ink);
+        flex-shrink: 0;
+      }
+      .addr-add-btn {
+        margin-top: 16px;
+        background: var(--n100);
+        border-radius: 14px;
+        padding: 15px;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--ink);
+      }
+
+      /* ---------- CHECKOUT ---------- */
+      .cart-row {
+        display: flex;
+        gap: 12px;
+        padding: 12px 20px;
+        align-items: center;
+        border-bottom: 1px solid var(--n100);
+      }
+      .stepper {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-top: 6px;
+      }
+      .step-btn {
+        width: 20px;
+        height: 20px;
+        border-radius: 6px;
+        border: 1px solid var(--n200);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .card-box {
+        margin: 14px 20px;
+        padding: 14px;
+        background: var(--surface);
+        border: 1px solid var(--n200);
+        border-radius: 14px;
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+      }
+      .card-box b {
+        font-size: 12.5px;
+        display: block;
+      }
+      .card-box p {
+        font-size: 11px;
+        color: var(--n600);
+        margin-top: 2px;
+      }
+      .summary {
+        margin: 6px 20px 0;
+        padding-top: 12px;
+        border-top: 1px dashed var(--n200);
+      }
+      .summary .row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--n600);
+        padding: 5px 0;
+      }
+      .summary .row.total {
+        color: var(--ink);
+        font-weight: 700;
+        font-size: 14px;
+        padding-top: 10px;
+        border-top: 1px solid var(--n200);
+        margin-top: 6px;
+      }
+      .cta {
+        position: absolute;
+        left: 16px;
+        right: 16px;
+        bottom: 16px;
+        background: var(--signal);
+        color: #fff;
+        border-radius: 16px;
+        padding: 16px;
+        text-align: center;
+        font-weight: 700;
+        font-size: 13.5px;
+        box-shadow: 0 10px 24px rgba(230, 52, 98, 0.35);
+      }
+
+      /* ---------- TRACKING ---------- */
+      .map {
+        height: 280px;
+        flex-shrink: 0;
+        position: relative;
+        overflow: hidden;
+        background:
+          linear-gradient(var(--n200) 1px, transparent 1px) 0 0/26px 26px,
+          linear-gradient(90deg, var(--n200) 1px, transparent 1px) 0 0/26px 26px,
+          var(--n100);
+      }
+      .route {
+        position: absolute;
+        width: 2.5px;
+        background: var(--support);
+        opacity: 0.5;
+      }
+      .pin {
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        border-radius: 50% 50% 50% 0;
+        background: var(--signal);
+        transform: rotate(-45deg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 10px rgba(230, 52, 98, 0.4);
+      }
+      .pin span {
+        transform: rotate(45deg);
+        font-size: 13px;
+      }
+      .pin.dest {
+        background: var(--support);
+        box-shadow: 0 4px 10px rgba(15, 82, 87, 0.4);
+      }
+      .track-card {
+        background: var(--surface);
+        border-radius: 24px 24px 0 0;
+        margin-top: -22px;
+        position: relative;
+        padding: 20px 20px 0;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .eta-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+      }
+      .eta-row .big {
+        font-family: "Space Grotesk", sans-serif;
+        font-weight: 700;
+        font-size: 34px;
+        line-height: 1;
+      }
+      .eta-row .big span {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--n600);
+      }
+      .courier {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 18px;
+        padding: 14px;
+        background: var(--n100);
+        border-radius: 16px;
+      }
+      .courier .avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: var(--warn);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        flex-shrink: 0;
+      }
+      .courier .who b {
+        font-size: 13px;
+        display: block;
+      }
+      .courier .who span {
+        font-size: 11px;
+        color: var(--n600);
+      }
+      .courier .actions {
+        margin-left: auto;
+        display: flex;
+        gap: 8px;
+      }
+      .courier .actions .round-btn {
+        background: var(--ink);
+        color: #fff;
+      }
+      .timeline {
+        margin-top: 20px;
+      }
+      .t-item {
+        display: flex;
+        gap: 12px;
+        padding-bottom: 18px;
+        position: relative;
+      }
+      .t-item:not(:last-child)::before {
+        content: "";
+        position: absolute;
+        left: 8px;
+        top: 20px;
+        bottom: 0;
+        width: 2px;
+        background: var(--n200);
+      }
+      .t-dot {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--n200);
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .t-dot.done {
+        background: var(--success);
+      }
+      .t-dot.done::after {
+        content: "✓";
+        color: #fff;
+        font-size: 10px;
+      }
+      .t-item b {
+        font-size: 12.5px;
+        display: block;
+      }
+      .t-item span {
+        font-size: 10.5px;
+        color: var(--n600);
+      }
+      .t-item.dim b,
+      .t-item.dim span {
+        color: var(--n300);
+      }
+
+      /* ---------- ORDER HISTORY ---------- */
+      .order-card {
+        margin: 0 20px 14px;
+        padding: 14px;
+        background: var(--surface);
+        border: 1px solid var(--n200);
+        border-radius: 16px;
+      }
+      .order-top {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .order-top b {
+        font-size: 13px;
+        display: block;
+      }
+      .order-date {
+        font-size: 11px;
+        color: var(--n600);
+        margin-top: 2px;
+        display: block;
+      }
+      .order-status {
+        font-size: 10px;
+        font-weight: 700;
+        padding: 4px 8px;
+        border-radius: 8px;
+        flex-shrink: 0;
+      }
+      .order-status.delivered {
+        background: #e7f3eb;
+        color: var(--success);
+      }
+      .order-status.cancelled {
+        background: #fbe3e9;
+        color: var(--signal);
+      }
+      .order-bottom {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 12px;
+        border-top: 1px dashed var(--n200);
+      }
+      .order-total {
+        font-family: "Space Grotesk", sans-serif;
+        font-weight: 700;
+        font-size: 13.5px;
+      }
+      .reorder-btn {
+        padding: 7px 14px;
+        border-radius: 10px;
+        background: var(--ink);
+        color: #fff;
+        font-size: 11.5px;
+        font-weight: 600;
+      }
+
+      /* ---------- PROFILE ---------- */
+      .profile-head {
+        padding: 26px 20px 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .avatar-lg {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--support);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: "Space Grotesk", sans-serif;
+        font-weight: 600;
+        font-size: 18px;
+      }
+      .profile-head b {
+        font-size: 15px;
+        display: block;
+      }
+      .profile-head span {
+        font-size: 11.5px;
+        color: var(--n600);
+      }
+      .stat-row {
+        display: flex;
+        margin: 0 20px 20px;
+        background: var(--n100);
+        border-radius: 16px;
+        padding: 16px 0;
+      }
+      .stat-row .col {
+        flex: 1;
+        text-align: center;
+        border-right: 1px solid var(--n200);
+      }
+      .stat-row .col:last-child {
+        border-right: none;
+      }
+      .stat-row .col b {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 16px;
+        display: block;
+      }
+      .stat-row .col span {
+        font-size: 10px;
+        color: var(--n600);
+      }
+      .list-item {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--n100);
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .list-item .li-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: var(--n100);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--ink);
+      }
+      .list-item .chev {
+        margin-left: auto;
+        color: var(--n300);
+      }
+      .list-item.logout {
+        color: var(--signal);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="canvas">
+      <div class="canvas-title">
+        CravingsNow — Product Design · Mobile · iOS 375×812 frames (scaled)
+      </div>
+      <div class="board">
+        <!-- COVER -->
+        <div class="frame-group">
+          <div class="frame-label">Cover</div>
+          <div class="frame cover">
+            <div>
+              <div class="mark">C</div>
+              <h1>CravingsNow</h1>
+              <p>
+                Krispy Kreme, Scoop'd & Burger Nation — delivered fast, all in
+                one app.
+              </p>
+              <div class="swatches">
+                <div class="swatch-item">
+                  <div class="chip" style="background: #e63462"></div>
+                  <span class="hex">#E63462</span>
+                </div>
+                <div class="swatch-item">
+                  <div class="chip" style="background: #0f5257"></div>
+                  <span class="hex">#0F5257</span>
+                </div>
+                <div class="swatch-item">
+                  <div class="chip" style="background: #4c9a6a"></div>
+                  <span class="hex">#4C9A6A</span>
+                </div>
+                <div class="swatch-item">
+                  <div class="chip" style="background: #e8a33d"></div>
+                  <span class="hex">#E8A33D</span>
+                </div>
+                <div class="swatch-item">
+                  <div class="chip" style="background: #f7f6f3"></div>
+                  <span class="hex">#F7F6F3</span>
+                </div>
+                <div class="swatch-item">
+                  <div class="chip" style="background: #1b1b1f"></div>
+                  <span class="hex">#1B1B1F</span>
+                </div>
+              </div>
+              <div class="type-spec">
+                <div class="row">
+                  <span>Signal (CTA / price)</span><b>Raspberry</b>
+                </div>
+                <div class="row">
+                  <span>Support (secondary)</span><b>Deep teal</b>
+                </div>
+                <div class="row">
+                  <span>Display / Numerals</span
+                  ><b style="font-family: &quot;Space Grotesk&quot;, sans-serif"
+                    >Space Grotesk</b
+                  >
+                </div>
+                <div class="row"><span>UI / Body</span><b>Inter</b></div>
+                <div class="row">
+                  <span>Corner radius</span><b>14 / 16 / 34</b>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 01 HOME -->
+        <div class="frame-group">
+          <div class="frame-label">01 · Home</div>
+          <div class="frame">
+            <div class="statusbar">
+              <span>9:41</span>
+              <div class="icons">
+                <div class="sb-bars">
+                  <span></span><span></span><span></span><span></span>
+                </div>
+                <div class="sb-batt"></div>
+              </div>
+            </div>
+            <div class="screen">
+              <div class="greeting">
+                <div class="hello">Good evening, Ada</div>
+                <div class="place">
+                  📍 Lekki Phase 1
+                  <svg
+                    class="icon"
+                    style="width: 13px; height: 13px"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </div>
+              </div>
+              <div class="search-bar">
+                <svg
+                  class="icon"
+                  style="width: 16px; height: 16px"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="M21 21l-4.35-4.35" />
+                </svg>
+                Search Krispy Kreme, burgers…
+              </div>
+              <div class="chips">
+                <div class="chip active">🍩 Donuts</div>
+                <div class="chip">🍔 Burgers</div>
+                <div class="chip">🍦 Ice cream</div>
+                <div class="chip">🎉 Specials</div>
+              </div>
+              <div class="banner">
+                <div class="deco"></div>
+                <b>Free delivery ×3</b>
+                <span>On your first three orders this week</span>
+              </div>
+              <div class="section-head">
+                <h3>Our brands</h3>
+                <a>See all</a>
+              </div>
+              <div class="r-card">
+                <div class="thumb" style="background: #fce3c6">🍩</div>
+                <div class="r-info">
+                  <b>Krispy Kreme</b>
+                  <div class="meta">
+                    <span class="rating">★ 4.8</span><span class="dot"></span
+                    ><span>20–30 min</span><span class="dot"></span
+                    ><span>₦₦</span>
+                  </div>
+                </div>
+              </div>
+              <div class="r-card">
+                <div class="thumb" style="background: #d9ece0">🍦</div>
+                <div class="r-info">
+                  <b>Scoop'd</b>
+                  <div class="meta">
+                    <span class="rating">★ 4.7</span><span class="dot"></span
+                    ><span>15–25 min</span><span class="dot"></span
+                    ><span>₦₦</span>
+                  </div>
+                </div>
+              </div>
+              <div class="r-card">
+                <div class="thumb" style="background: #f6d9de">🍔</div>
+                <div class="r-info">
+                  <b>Burger Nation</b>
+                  <div class="meta">
+                    <span class="rating">★ 4.9</span><span class="dot"></span
+                    ><span>25–35 min</span><span class="dot"></span
+                    ><span>₦₦₦</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="bottomnav">
+              <div class="navitem active">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M3 11l9-7 9 7" />
+                  <path d="M5 10v10h14V10" />
+                </svg>
+                <span>Home</span>
+              </div>
+              <div class="navitem">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M4 4h16l1 5H3l1-5z" />
+                  <path d="M4 9v10a1 1 0 001 1h4v-6h6v6h4a1 1 0 001-1V9" />
+                </svg>
+                <span>Brands</span>
+              </div>
+              <div class="navitem">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M6 8h12l-1 12H7L6 8z" />
+                  <path d="M9 8V6a3 3 0 016 0v2" />
+                </svg>
+                <span>Orders</span>
+              </div>
+              <div class="navitem">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6" />
+                </svg>
+                <span>Profile</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 02 BRANDS -->
+        <div class="frame-group">
+          <div class="frame-label">02 · Brands</div>
+          <div class="frame">
+            <div class="statusbar">
+              <span>9:41</span>
+              <div class="icons">
+                <div class="sb-bars">
+                  <span></span><span></span><span></span><span></span>
+                </div>
+                <div class="sb-batt"></div>
+              </div>
+            </div>
+            <div class="page-header">Brands</div>
+            <div class="screen" style="overflow-y: auto">
+              <div class="brand-row">
+                <div class="brand-logo" style="background: #fce3c6">🍩</div>
+                <div class="brand-info">
+                  <b>Krispy Kreme</b>
+                  <div class="meta">
+                    <span class="rating">★ 4.8</span><span class="dot"></span
+                    ><span>Donuts · Coffee</span><span class="dot"></span
+                    ><span>20–30 min</span>
+                  </div>
+                </div>
+                <span class="chev">›</span>
+              </div>
+              <div class="brand-row">
+                <div class="brand-logo" style="background: #d9ece0">🍦</div>
+                <div class="brand-info">
+                  <b>Scoop'd</b>
+                  <div class="meta">
+                    <span class="rating">★ 4.7</span><span class="dot"></span
+                    ><span>Ice cream · Desserts</span>
+                  </div>
+                </div>
+                <span class="chev">›</span>
+              </div>
+              <div class="brand-row">
+                <div class="brand-logo" style="background: #f6d9de">🍔</div>
+                <div class="brand-info">
+                  <b>Burger Nation</b>
+                  <div class="meta">
+                    <span class="rating">★ 4.9</span><span class="dot"></span
+                    ><span>Burgers · Grills</span>
+                  </div>
+                </div>
+                <span class="chev">›</span>
+              </div>
+
+              <div class="section-head" style="margin-top: 12px">
+                <h3>Most Loved</h3>
+                <a>See all</a>
+              </div>
+              <div class="h-scroll">
+                <div class="prod-card">
+                  <div class="thumb-lg" style="background: #fce3c6">🍩</div>
+                  <b>Original Glazed Dozen</b>
+                  <span class="brand-tag">Krispy Kreme</span>
+                  <div class="price">₦4,500</div>
+                </div>
+                <div class="prod-card">
+                  <div class="thumb-lg" style="background: #f6d9de">🍔</div>
+                  <b>Double Cheese Stack</b>
+                  <span class="brand-tag">Burger Nation</span>
+                  <div class="price">₦3,200</div>
+                </div>
+                <div class="prod-card">
+                  <div class="thumb-lg" style="background: #d9ece0">🍦</div>
+                  <b>Cookies & Cream Tub</b>
+                  <span class="brand-tag">Scoop'd</span>
+                  <div class="price">₦2,800</div>
+                </div>
+              </div>
+
+              <div class="section-head">
+                <h3>Trending Now</h3>
+                <a>See all</a>
+              </div>
+              <div class="h-scroll">
+                <div class="prod-card">
+                  <div class="badge">🔥</div>
+                  <div class="thumb-lg" style="background: #fce3c6">🍩</div>
+                  <b>Iced Caramel Donut</b>
+                  <span class="brand-tag">Krispy Kreme</span>
+                  <div class="price">₦1,600</div>
+                </div>
+                <div class="prod-card">
+                  <div class="badge">🔥</div>
+                  <div class="thumb-lg" style="background: #f6d9de">🍔</div>
+                  <b>Spicy Chicken Burger</b>
+                  <span class="brand-tag">Burger Nation</span>
+                  <div class="price">₦3,600</div>
+                </div>
+                <div class="prod-card">
+                  <div class="badge">🔥</div>
+                  <div class="thumb-lg" style="background: #d9ece0">🍦</div>
+                  <b>Choco Fudge Sundae</b>
+                  <span class="brand-tag">Scoop'd</span>
+                  <div class="price">₦2,600</div>
+                </div>
+              </div>
+            </div>
+            <div class="bottomnav">
+              <div class="navitem">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M3 11l9-7 9 7" />
+                  <path d="M5 10v10h14V10" />
+                </svg>
+                <span>Home</span>
+              </div>
+              <div class="navitem active">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M4 4h16l1 5H3l1-5z" />
+                  <path d="M4 9v10a1 1 0 001 1h4v-6h6v6h4a1 1 0 001-1V9" />
+                </svg>
+                <span>Brands</span>
+              </div>
+              <div class="navitem">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M6 8h12l-1 12H7L6 8z" />
+                  <path d="M9 8V6a3 3 0 016 0v2" />
+                </svg>
+                <span>Orders</span>
+              </div>
+              <div class="navitem">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6" />
+                </svg>
+                <span>Profile</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 03 MENU (Burger Nation) -->
+        <div class="frame-group">
+          <div class="frame-label">03 · Menu</div>
+          <div class="frame">
+            <div class="screen" style="overflow-y: auto">
+              <div
+                class="hero"
+                style="background: linear-gradient(135deg, #f3b94a, #e6653a)"
+              >
+                <div class="top-icons">
+                  <div class="round-btn">
+                    <svg
+                      class="icon"
+                      style="width: 16px; height: 16px"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M15 18l-6-6 6-6" />
+                    </svg>
+                  </div>
+                  <div class="round-btn">
+                    <svg
+                      class="icon"
+                      style="width: 16px; height: 16px"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                    >
+                      <path
+                        d="M12 21s-7-4.35-9.5-8.5C1 9 2.5 5.5 6 5c2-.2 3.5 1 4 2.3.5-1.3 2-2.5 4-2.3 3.5.5 5 4 3.5 7.5C19 16.65 12 21 12 21z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="r-header">
+                <h2>Burger Nation</h2>
+                <div class="tags">
+                  Burgers · Grills · <span class="rating">★ 4.9</span> (1.2k)
+                </div>
+              </div>
+              <div class="fulfillment-tabs">
+                <div class="fulfillment-tab active">Delivery</div>
+                <div class="fulfillment-tab">Pickup</div>
+              </div>
+              <div class="info-strip">
+                <div class="col"><b>25–35</b><span>min</span></div>
+                <div class="col"><b>₦500</b><span>delivery</span></div>
+                <div class="col"><b>2.1 km</b><span>away</span></div>
+              </div>
+              <div class="tabs">
+                <div class="tab-active">Popular</div>
+                <div>Burgers</div>
+                <div>Sides</div>
+                <div>Drinks</div>
+              </div>
+              <div class="menu-item">
+                <div class="mi-info">
+                  <b>Double Cheese Stack</b>
+                  <p>Two beef patties, cheddar, house sauce, brioche bun.</p>
+                  <div class="mi-price">₦3,200</div>
+                </div>
+                <div class="add-btn">
+                  <svg
+                    class="icon"
+                    style="width: 14px; height: 14px"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.2"
+                  >
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                </div>
+              </div>
+              <div class="menu-item">
+                <div class="mi-info">
+                  <b>Loaded Fries</b>
+                  <p>Crinkle-cut fries, cheese sauce, jalapeños.</p>
+                  <div class="mi-price">₦1,800</div>
+                </div>
+                <div class="add-btn">
+                  <svg
+                    class="icon"
+                    style="width: 14px; height: 14px"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.2"
+                  >
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                </div>
+              </div>
+              <div class="menu-item">
+                <div class="mi-info">
+                  <b>Vanilla Shake</b>
+                  <p>Thick house-blend shake, whipped cream.</p>
+                  <div class="mi-price">₦1,500</div>
+                </div>
+                <div class="add-btn">
+                  <svg
+                    class="icon"
+                    style="width: 14px; height: 14px"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.2"
+                  >
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div class="cart-bar">
+              <span>3 items · ₦6,500</span>
+              <span>View cart →</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 04 ITEM DETAIL -->
+        <div class="frame-group">
+          <div class="frame-label">04 · Item detail</div>
+          <div class="frame">
+            <div class="sheet-backdrop"></div>
+            <div class="sheet-panel">
+              <div class="sheet-handle"></div>
+              <div class="sheet-close">
+                <svg
+                  class="icon"
+                  style="width: 14px; height: 14px"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </div>
+              <div class="sheet-scroll">
+                <div class="sheet-hero" style="background: #fce3c6">🍩</div>
+                <div class="discount-pill">-35%</div>
+                <div class="sheet-title">Assorted Dozen Box</div>
+                <div class="price-row">
+                  <span class="price-now">₦15,300</span>
+                  <span class="price-was">₦23,538</span>
+                </div>
+                <div class="includes">
+                  <div class="include-row">• 3 Original Glazed Doughnuts</div>
+                  <div class="include-row">• 3 Assorted Doughnuts</div>
+                  <div class="include-row">• 2 Kreme Shakes</div>
+                </div>
+                <div class="sheet-divider"></div>
+                <div class="option-head-row">
+                  <div>
+                    <div class="option-head-title">
+                      Choice of Assorted Doughnuts
+                    </div>
+                    <div class="option-head-sub">Choose 3 items</div>
+                  </div>
+                  <div class="required-pill">Required</div>
+                </div>
+                <div>
+                  <div class="option-row">
+                    <b>Coconut Ring</b>
+                    <div class="option-add selected">✓</div>
+                  </div>
+                  <div class="option-row">
+                    <b>Chocolate Iced w/ Sprinkles</b>
+                    <div class="option-add selected">✓</div>
+                  </div>
+                  <div class="option-row">
+                    <b>Choco-Nut Halo</b>
+                    <div class="option-add selected">✓</div>
+                  </div>
+                  <div class="option-row">
+                    <b>Triple Chocolate</b>
+                    <div class="option-add">+</div>
+                  </div>
+                  <div class="option-row">
+                    <b>Powdered Strawberry</b>
+                    <div class="option-add">+</div>
+                  </div>
+                  <div class="option-row">
+                    <b>Milky Delight</b>
+                    <div class="option-add">+</div>
+                  </div>
+                </div>
+                <div class="qty-row">
+                  <div class="step-btn">−</div>
+                  <span>1</span>
+                  <div class="step-btn">+</div>
+                </div>
+              </div>
+              <div class="sheet-cta">Add 1 for ₦15,300</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 05 DELIVERY ADDRESS -->
+        <div class="frame-group">
+          <div class="frame-label">05 · Delivery address</div>
+          <div class="frame">
+            <div class="addr-map">
+              <div class="round-btn addr-close">
+                <svg
+                  class="icon"
+                  style="width: 14px; height: 14px"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </div>
+              <div class="round-btn addr-locate-btn">
+                <svg
+                  class="icon"
+                  style="width: 15px; height: 15px"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M3 11l18-8-8 18-2-8-8-2z" />
+                </svg>
+              </div>
+              <div class="addr-pin-label">Mobolaji Bank Anthony Way, 3a</div>
+              <div class="addr-pin-badge">
+                <svg
+                  class="icon"
+                  style="width: 20px; height: 20px"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--support)"
+                  stroke-width="2"
+                >
+                  <path d="M3 11l9-7 9 7" />
+                  <path d="M5 10v10h14V10" />
+                </svg>
+              </div>
+              <div class="addr-grabber"></div>
+            </div>
+            <div class="addr-sheet">
+              <div class="addr-title">Where should we deliver?</div>
+
+              <div class="addr-row">
+                <div class="addr-icon">
+                  <svg
+                    class="icon"
+                    style="width: 16px; height: 16px"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <path d="M3 11l18-8-8 18-2-8-8-2z" />
+                  </svg>
+                </div>
+                <div class="addr-info">
+                  <b>Current location</b>
+                  <span>Mobolaji Bank Anthony Way, 3a</span>
+                  <div class="addr-warning">⚠ Missing address details</div>
+                </div>
+              </div>
+
+              <div class="addr-row">
+                <div class="addr-icon">
+                  <svg
+                    class="icon"
+                    style="width: 16px; height: 16px"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <rect x="3" y="4" width="18" height="12" rx="2" />
+                    <path d="M8 20h8M12 16v4" />
+                  </svg>
+                </div>
+                <div class="addr-info">
+                  <b>Work</b>
+                  <span>Ligali Ayorinde Street, 310A</span>
+                </div>
+                <div class="addr-edit-btn">
+                  <svg
+                    class="icon"
+                    style="width: 14px; height: 14px"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <path d="M12 20h9" />
+                    <path
+                      d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"
+                    />
+                  </svg>
+                </div>
+              </div>
+
+              <div class="addr-row" style="border-bottom: none">
+                <div class="addr-icon">
+                  <svg
+                    class="icon"
+                    style="width: 16px; height: 16px"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <path d="M3 11l9-7 9 7" />
+                    <path d="M5 10v10h14V10" />
+                  </svg>
+                </div>
+                <div class="addr-info">
+                  <b>Home</b>
+                  <span>Barrack Estate, block 8</span>
+                </div>
+                <div class="addr-edit-btn">
+                  <svg
+                    class="icon"
+                    style="width: 14px; height: 14px"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <path d="M12 20h9" />
+                    <path
+                      d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"
+                    />
+                  </svg>
+                </div>
+              </div>
+
+              <div class="addr-add-btn">Add a new address</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 06 CHECKOUT -->
+        <div class="frame-group">
+          <div class="frame-label">06 · Checkout</div>
+          <div class="frame">
+            <div class="statusbar">
+              <span>9:41</span>
+              <div class="icons">
+                <div class="sb-bars">
+                  <span></span><span></span><span></span><span></span>
+                </div>
+                <div class="sb-batt"></div>
+              </div>
+            </div>
+            <div class="page-header">
+              <svg
+                class="icon"
+                style="width: 16px; height: 16px"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+              Your order
+            </div>
+            <div class="screen" style="overflow-y: auto">
+              <div class="cart-row">
+                <div
+                  class="thumb"
+                  style="
+                    width: 48px;
+                    height: 48px;
+                    background: #f6d9de;
+                    font-size: 18px;
+                  "
+                >
+                  🍔
+                </div>
+                <div style="flex: 1">
+                  <b style="font-size: 12.5px">Double Cheese Stack</b>
+                  <div class="stepper">
+                    <div class="step-btn">−</div>
+                    <span style="font-size: 12px; font-weight: 600">2</span>
+                    <div class="step-btn">+</div>
+                  </div>
+                </div>
+                <div
+                  style="
+                    font-family: &quot;Space Grotesk&quot;, sans-serif;
+                    font-size: 12.5px;
+                    font-weight: 600;
+                  "
+                >
+                  ₦6,400
+                </div>
+              </div>
+              <div class="cart-row">
+                <div
+                  class="thumb"
+                  style="
+                    width: 48px;
+                    height: 48px;
+                    background: #fce3c6;
+                    font-size: 18px;
+                  "
+                >
+                  🍟
+                </div>
+                <div style="flex: 1">
+                  <b style="font-size: 12.5px">Loaded Fries</b>
+                  <div class="stepper">
+                    <div class="step-btn">−</div>
+                    <span style="font-size: 12px; font-weight: 600">1</span>
+                    <div class="step-btn">+</div>
+                  </div>
+                </div>
+                <div
+                  style="
+                    font-family: &quot;Space Grotesk&quot;, sans-serif;
+                    font-size: 12.5px;
+                    font-weight: 600;
+                  "
+                >
+                  ₦1,800
+                </div>
+              </div>
+              <div class="card-box">
+                <svg
+                  class="icon"
+                  style="width: 17px; height: 17px; flex-shrink: 0"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z" />
+                  <circle cx="12" cy="9" r="2.4" />
+                </svg>
+                <div>
+                  <b>Deliver to Home</b>
+                  <p>14 Admiralty Way, Lekki Phase 1</p>
+                </div>
+              </div>
+              <div class="card-box">
+                <svg
+                  class="icon"
+                  style="width: 17px; height: 17px; flex-shrink: 0"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <rect x="3" y="6" width="18" height="13" rx="2" />
+                  <path d="M16 12h3" />
+                </svg>
+                <div>
+                  <b>Pay with card</b>
+                  <p>Visa •••• 4821</p>
+                </div>
+              </div>
+              <div class="summary">
+                <div class="row"><span>Subtotal</span><span>₦8,200</span></div>
+                <div class="row">
+                  <span>Delivery fee</span><span>₦500</span>
+                </div>
+                <div class="row"><span>Service fee</span><span>₦150</span></div>
+                <div class="row total">
+                  <span>Total</span><span>₦8,850</span>
+                </div>
+              </div>
+            </div>
+            <div class="cta">Place order · ₦8,850</div>
+          </div>
+        </div>
+
+        <!-- 07 TRACKING -->
+        <div class="frame-group">
+          <div class="frame-label">07 · Live tracking</div>
+          <div class="frame">
+            <div
+              class="statusbar"
+              style="position: absolute; z-index: 2; width: 100%"
+            >
+              <span>9:41</span>
+              <div class="icons">
+                <div class="sb-bars">
+                  <span></span><span></span><span></span><span></span>
+                </div>
+                <div class="sb-batt"></div>
+              </div>
+            </div>
+            <div class="map">
+              <div
+                class="route"
+                style="
+                  left: 60px;
+                  top: 80px;
+                  height: 170px;
+                  transform: rotate(18deg);
+                "
+              ></div>
+              <div class="pin" style="left: 44px; top: 60px">
+                <span>🛵</span>
+              </div>
+              <div class="pin dest" style="left: 170px; top: 210px">
+                <span>🏠</span>
+              </div>
+            </div>
+            <div class="track-card">
+              <div class="eta-row">
+                <div class="big">12<span> min</span></div>
+                <span style="font-size: 11px; color: var(--n600)"
+                  >Arriving 9:53 PM</span
+                >
+              </div>
+              <div class="courier">
+                <div class="avatar">🙂</div>
+                <div class="who"><b>Tunde A.</b><span>Honda · ★ 4.9</span></div>
+                <div class="actions">
+                  <div class="round-btn">
+                    <svg
+                      class="icon"
+                      style="width: 14px; height: 14px"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M4 5c0 8 7 15 15 15l3-4-6-3-2 2c-3-1.5-5-3.5-6.5-6.5l2-2-3-6-4 .5z"
+                      />
+                    </svg>
+                  </div>
+                  <div class="round-btn">
+                    <svg
+                      class="icon"
+                      style="width: 14px; height: 14px"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M4 4h16v12H8l-4 4V4z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="timeline">
+                <div class="t-item">
+                  <div class="t-dot done"></div>
+                  <div><b>Order confirmed</b><span>9:31 PM</span></div>
+                </div>
+                <div class="t-item">
+                  <div class="t-dot done"></div>
+                  <div><b>Preparing your order</b><span>9:34 PM</span></div>
+                </div>
+                <div class="t-item">
+                  <div class="t-dot done"></div>
+                  <div><b>Courier picked up</b><span>9:44 PM</span></div>
+                </div>
+                <div class="t-item dim">
+                  <div class="t-dot"></div>
+                  <div><b>Delivered</b><span>Est. 9:53 PM</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 08 ORDER HISTORY -->
+        <div class="frame-group">
+          <div class="frame-label">08 · Order history</div>
+          <div class="frame">
+            <div class="statusbar">
+              <span>9:41</span>
+              <div class="icons">
+                <div class="sb-bars">
+                  <span></span><span></span><span></span><span></span>
+                </div>
+                <div class="sb-batt"></div>
+              </div>
+            </div>
+            <div class="page-header">Order history</div>
+            <div class="screen" style="overflow-y: auto">
+              <div class="order-card">
+                <div class="order-top">
+                  <div
+                    class="thumb"
+                    style="
+                      width: 44px;
+                      height: 44px;
+                      background: #f6d9de;
+                      font-size: 18px;
+                    "
+                  >
+                    🍔
+                  </div>
+                  <div style="flex: 1">
+                    <b>Burger Nation</b>
+                    <span class="order-date">Sep 10 · 3 items</span>
+                  </div>
+                  <div class="order-status delivered">Delivered</div>
+                </div>
+                <div class="order-bottom">
+                  <span class="order-total">₦8,850</span>
+                  <div class="reorder-btn">Reorder</div>
+                </div>
+              </div>
+              <div class="order-card">
+                <div class="order-top">
+                  <div
+                    class="thumb"
+                    style="
+                      width: 44px;
+                      height: 44px;
+                      background: #fce3c6;
+                      font-size: 18px;
+                    "
+                  >
+                    🍩
+                  </div>
+                  <div style="flex: 1">
+                    <b>Krispy Kreme</b>
+                    <span class="order-date">Sep 6 · 1 dozen</span>
+                  </div>
+                  <div class="order-status delivered">Delivered</div>
+                </div>
+                <div class="order-bottom">
+                  <span class="order-total">₦4,500</span>
+                  <div class="reorder-btn">Reorder</div>
+                </div>
+              </div>
+              <div class="order-card">
+                <div class="order-top">
+                  <div
+                    class="thumb"
+                    style="
+                      width: 44px;
+                      height: 44px;
+                      background: #d9ece0;
+                      font-size: 18px;
+                    "
+                  >
+                    🍦
+                  </div>
+                  <div style="flex: 1">
+                    <b>Scoop'd</b>
+                    <span class="order-date">Aug 29 · 2 items</span>
+                  </div>
+                  <div class="order-status cancelled">Cancelled</div>
+                </div>
+                <div class="order-bottom">
+                  <span class="order-total">₦2,800</span>
+                  <div class="reorder-btn">Reorder</div>
+                </div>
+              </div>
+            </div>
+            <div class="bottomnav">
+              <div class="navitem">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M3 11l9-7 9 7" />
+                  <path d="M5 10v10h14V10" />
+                </svg>
+                <span>Home</span>
+              </div>
+              <div class="navitem">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M4 4h16l1 5H3l1-5z" />
+                  <path d="M4 9v10a1 1 0 001 1h4v-6h6v6h4a1 1 0 001-1V9" />
+                </svg>
+                <span>Brands</span>
+              </div>
+              <div class="navitem active">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M6 8h12l-1 12H7L6 8z" />
+                  <path d="M9 8V6a3 3 0 016 0v2" />
+                </svg>
+                <span>Orders</span>
+              </div>
+              <div class="navitem">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6" />
+                </svg>
+                <span>Profile</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 09 PROFILE -->
+        <div class="frame-group">
+          <div class="frame-label">09 · Profile</div>
+          <div class="frame">
+            <div class="statusbar">
+              <span>9:41</span>
+              <div class="icons">
+                <div class="sb-bars">
+                  <span></span><span></span><span></span><span></span>
+                </div>
+                <div class="sb-batt"></div>
+              </div>
+            </div>
+            <div class="screen">
+              <div class="profile-head">
+                <div class="avatar-lg">AO</div>
+                <div><b>Ada Okafor</b><span>ada.okafor@email.com</span></div>
+              </div>
+              <div class="stat-row">
+                <div class="col"><b>34</b><span>Orders</span></div>
+                <div class="col"><b>3</b><span>Addresses</span></div>
+                <div class="col"><b>12</b><span>Favourites</span></div>
+              </div>
+              <div class="list-item">
+                <div class="li-icon">
+                  <svg
+                    class="icon"
+                    style="width: 16px; height: 16px"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <path d="M6 8h12l-1 12H7L6 8z" />
+                    <path d="M9 8V6a3 3 0 016 0v2" />
+                  </svg>
+                </div>
+                Order history
+                <span class="chev">›</span>
+              </div>
+              <div class="list-item">
+                <div class="li-icon">
+                  <svg
+                    class="icon"
+                    style="width: 16px; height: 16px"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <path
+                      d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"
+                    />
+                    <circle cx="12" cy="9" r="2.4" />
+                  </svg>
+                </div>
+                Saved addresses
+                <span class="chev">›</span>
+              </div>
+              <div class="list-item">
+                <div class="li-icon">
+                  <svg
+                    class="icon"
+                    style="width: 16px; height: 16px"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <rect x="3" y="6" width="18" height="13" rx="2" />
+                    <path d="M16 12h3" />
+                  </svg>
+                </div>
+                Payment methods
+                <span class="chev">›</span>
+              </div>
+              <div class="list-item">
+                <div class="li-icon">
+                  <svg
+                    class="icon"
+                    style="width: 16px; height: 16px"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.7 21a2 2 0 01-3.4 0" />
+                  </svg>
+                </div>
+                Notifications
+                <span class="chev">›</span>
+              </div>
+              <div class="list-item">
+                <div class="li-icon">
+                  <svg
+                    class="icon"
+                    style="width: 16px; height: 16px"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M9.5 9a2.5 2.5 0 115 .5c0 1.5-2 1.7-2 3.5" />
+                    <path d="M12 17h.01" />
+                  </svg>
+                </div>
+                Help & support
+                <span class="chev">›</span>
+              </div>
+              <div class="list-item logout">
+                <div
+                  class="li-icon"
+                  style="background: #fbe3e9; color: var(--signal)"
+                >
+                  <svg
+                    class="icon"
+                    style="width: 16px; height: 16px"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                    <path d="M16 17l5-5-5-5" />
+                    <path d="M21 12H9" />
+                  </svg>
+                </div>
+                Log out
+              </div>
+            </div>
+            <div class="bottomnav">
+              <div class="navitem">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M3 11l9-7 9 7" />
+                  <path d="M5 10v10h14V10" />
+                </svg>
+                <span>Home</span>
+              </div>
+              <div class="navitem">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M4 4h16l1 5H3l1-5z" />
+                  <path d="M4 9v10a1 1 0 001 1h4v-6h6v6h4a1 1 0 001-1V9" />
+                </svg>
+                <span>Brands</span>
+              </div>
+              <div class="navitem">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M6 8h12l-1 12H7L6 8z" />
+                  <path d="M9 8V6a3 3 0 016 0v2" />
+                </svg>
+                <span>Orders</span>
+              </div>
+              <div class="navitem active">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6" />
+                </svg>
+                <span>Profile</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
