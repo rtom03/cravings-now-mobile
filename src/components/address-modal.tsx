@@ -1,9 +1,18 @@
 import { Href, useRouter } from "expo-router";
-import { ScrollView, StatusBar, TouchableOpacity, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  Image,
+  ScrollView,
+  StatusBar,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "./app-text";
 import SafeModal from "./shared/safe-modal";
 import { Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
+import { useAddresses } from "@/hooks/cravings-now-api/address-query";
 
 // ─── CravingsNow design tokens ──────────────────────────────────────────────
 // TODO: extract into a shared `@/constants/theme` file — duplicated across
@@ -21,22 +30,9 @@ const COLORS = {
   n100: "#F1EFEA",
 };
 
-// TODO: replace with real saved-address data once an addresses API/store
-// exists — these mirror the design frame's sample content.
-const SAVED_ADDRESSES = [
-  {
-    id: "work",
-    label: "Work",
-    detail: "Ligali Ayorinde Street, 310A",
-    icon: "desktop-outline" as const,
-  },
-  {
-    id: "home",
-    label: "Home",
-    detail: "Morgan Street, 8",
-    icon: "home-outline" as const,
-  },
-];
+// TODO: move into app config — the EXPO_PUBLIC_ prefix is required for Expo
+// to expose an env var to the client bundle at all.
+const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
 function AddressRow({
   icon,
@@ -136,10 +132,74 @@ export default function AddressModal({
 }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { data: addresses } = useAddresses();
 
-  // TODO: replace with the device's real detected location + reverse
-  // geocoded address once location permissions/geocoding are wired up.
-  const currentLocationLabel = "Mobolaji Bank Anthony Way, 3a";
+  // console.log(addresses);
+
+  const [coords, setCoords] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [currentLocationLabel, setCurrentLocationLabel] = useState<string>(
+    "Detecting location…",
+  );
+
+  // Only look up location while the modal is actually open, and guard
+  // against setting state after it's been closed/unmounted mid-request.
+  useEffect(() => {
+    if (!visible) return;
+    let cancelled = false;
+
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        if (!cancelled) setCurrentLocationLabel("Location permission denied");
+        return;
+      }
+
+      const position = await Location.getCurrentPositionAsync({});
+      if (cancelled) return;
+      setCoords({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+
+      // const [place] = await Location.reverseGeocodeAsync({
+      //   latitude: position.coords.latitude,
+      //   longitude: position.coords.longitude,
+      // });
+      // if (!cancelled) {
+      //   const label = [place?.street, place?.name, place?.city]
+      //     .filter(Boolean)
+      //     .join(", ");
+      //   setCurrentLocationLabel(label || "Current location");
+      // }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visible]);
+
+  // A real map image, centered on wherever `coords` currently points — the
+  // pin overlay below is drawn on top and stays visually centered, which
+  // together read as "the map, at your location" without needing a full
+  // interactive map library for what's otherwise a static preview.
+  const staticMapUrl = coords
+    ? `https://mapmap.ai/api/static-map?center=${coords.longitude},${coords.latitude}&zoom=16&size=640x400&markers=${coords.longitude},${coords.latitude}`
+    : null;
+  // console.log(staticMapUrl);
+  const goToAddressSearch = () => {
+    onClose();
+    router.push({
+      pathname: "/address/new",
+      // Biases Google's search results toward the person's current area
+      // rather than searching blind.
+      params: coords
+        ? { lat: String(coords.latitude), lng: String(coords.longitude) }
+        : undefined,
+    });
+  };
 
   // Picking any address just closes the modal for now — swap this for
   // writing to a shared "selected address" store once one exists.
@@ -155,9 +215,21 @@ export default function AddressModal({
       <View style={{ flex: 1, backgroundColor: COLORS.paper }}>
         <StatusBar barStyle="dark-content" />
 
-        {/* TODO: swap this flat placeholder for a real map (e.g.
-            react-native-maps) centered on the pin — kept simple for now. */}
-        <View style={{ height: 230, backgroundColor: COLORS.n100 }}>
+        <View
+          style={{
+            height: 430,
+            backgroundColor: COLORS.n100,
+            overflow: "hidden",
+          }}
+        >
+          {staticMapUrl && (
+            <Image
+              source={{ uri: staticMapUrl }}
+              style={{ position: "absolute", width: "100%", height: "100%" }}
+              resizeMode="cover"
+            />
+          )}
+
           <TouchableOpacity
             onPress={onClose}
             style={{
@@ -270,13 +342,13 @@ export default function AddressModal({
               />
             </TouchableOpacity>
 
-            {SAVED_ADDRESSES.map((address, index) => (
+            {addresses?.map((address) => (
               <TouchableOpacity key={address.id} onPress={selectAddress}>
                 <AddressRow
-                  icon={address.icon}
-                  label={address.label}
-                  detail={address.detail}
-                  showDivider={index < SAVED_ADDRESSES.length - 1}
+                  icon="navigate-outline"
+                  label={address?.name!}
+                  detail={address.type}
+                  showDivider={addresses.length > 1}
                   onEdit={() => {
                     // TODO: navigate to an edit-address screen once it exists.
                   }}
@@ -285,10 +357,7 @@ export default function AddressModal({
             ))}
 
             <TouchableOpacity
-              onPress={() => {
-                onClose();
-                router.push("/address/new" as Href);
-              }}
+              onPress={goToAddressSearch}
               style={{
                 marginTop: 16,
                 backgroundColor: COLORS.n100,

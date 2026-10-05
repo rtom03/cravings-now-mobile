@@ -31,7 +31,10 @@ export default function MenuItemCard({
   onPress: () => void;
   onAdd: () => void;
 }) {
-  const { items, incrementQty, decrementQty, removeFromCart } = useCartStore();
+  const { items, incrementQty, decrementQty, removeFromCart, totalItems } =
+    useCartStore();
+
+  // console.log(items);
 
   const hasAnyOptions = !!item.option?.length;
   const hasRequiredOptions = !!item.option?.some((m) => m.minimumOptions > 0);
@@ -42,8 +45,7 @@ export default function MenuItemCard({
   const cartLine = hasRequiredOptions
     ? undefined
     : items.find((i) => i.id === item.id);
-  const qtyInCart = cartLine?.qty ?? 0;
-
+  const qtyInCart = cartLine?.quantity ?? 0;
   const handleAddPress = () => {
     if (hasRequiredOptions) {
       onPress();
@@ -170,8 +172,8 @@ export default function MenuItemCard({
               <TouchableOpacity
                 onPress={() =>
                   qtyInCart === 1
-                    ? removeFromCart(item.id)
-                    : decrementQty(item.id)
+                    ? removeFromCart(cartLine!.lineId)
+                    : decrementQty(cartLine!.lineId)
                 }
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 style={{
@@ -199,10 +201,10 @@ export default function MenuItemCard({
                   textAlign: "center",
                 }}
               >
-                {qtyInCart}
+                {cartLine?.quantity}
               </AppText>
               <TouchableOpacity
-                onPress={() => incrementQty(item.id)}
+                onPress={() => incrementQty(cartLine!.lineId)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 style={{
                   width: 32,

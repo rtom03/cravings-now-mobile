@@ -44,7 +44,7 @@ export default function CartScreen() {
     clearCart,
   } = useCartStore();
 
-  const totalItems = items.reduce((sum, i) => sum + i.qty, 0);
+  const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
   const isEmpty = items.length === 0;
 
   return (
@@ -130,7 +130,7 @@ export default function CartScreen() {
             Add items from your favorite brands to get started.
           </AppText>
           {/* TODO: confirm the Brands tab's actual route segment. */}
-          <Link href={"/(tabs)/brands" as Href} asChild>
+          <Link href={"/discover" as Href} asChild>
             <TouchableOpacity
               style={{
                 backgroundColor: COLORS.signal,
@@ -164,7 +164,7 @@ export default function CartScreen() {
 
             {items.map((item) => (
               <View
-                key={item.id}
+                key={item.lineId}
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
@@ -229,7 +229,7 @@ export default function CartScreen() {
                 >
                   <TouchableOpacity
                     onPress={() =>
-                      item.qty === 1
+                      item.quantity === 1
                         ? removeFromCart(item.id)
                         : decrementQty(item.id)
                     }
@@ -245,11 +245,11 @@ export default function CartScreen() {
                   >
                     <Text
                       style={{
-                        fontSize: item.qty === 1 ? 12 : 15,
+                        fontSize: item.quantity === 1 ? 12 : 15,
                         color: COLORS.ink,
                       }}
                     >
-                      {item.qty === 1 ? "🗑" : "−"}
+                      {item.quantity === 1 ? "🗑" : "−"}
                     </Text>
                   </TouchableOpacity>
                   <AppText
@@ -261,7 +261,7 @@ export default function CartScreen() {
                       textAlign: "center",
                     }}
                   >
-                    {item.qty}
+                    {item.quantity}
                   </AppText>
                   <TouchableOpacity
                     onPress={() => incrementQty(item.id)}
@@ -304,7 +304,7 @@ export default function CartScreen() {
 
           {/* TODO: this repo's existing checkout route is "/proceed" — kept
               as-is rather than guessing a "/checkout" rename. */}
-          <Link href={"/proceed" as Href} asChild>
+          <Link href={"/checkout" as Href} asChild>
             <TouchableOpacity
               style={{
                 position: "absolute",

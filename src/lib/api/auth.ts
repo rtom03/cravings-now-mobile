@@ -1,5 +1,5 @@
 import { apiFetch } from "@/services/api";
-import { signInWithGoogle } from "../googleAuth";
+import { signInWithGoogle, signOutGoogle } from "../googleAuth";
 import * as SecureStore from "expo-secure-store";
 import { useAuthStore } from "../../../store/authStore";
 
@@ -16,7 +16,7 @@ type GoogleAuthResponse = {
 export async function loginWithGoogle(): Promise<GoogleAuthResponse> {
   const idToken = await signInWithGoogle();
 
-  const res = await apiFetch<GoogleAuthResponse>("/user/auth/google", {
+  const res = await apiFetch<GoogleAuthResponse>("/customer/auth/google", {
     method: "POST",
     body: JSON.stringify({ idToken }),
   });
@@ -25,4 +25,17 @@ export async function loginWithGoogle(): Promise<GoogleAuthResponse> {
   useAuthStore.getState().setAuth(res.user, res.token);
 
   return res;
+}
+
+export async function logout(): Promise<void> {
+  try {
+    await signOutGoogle();
+  } catch (err) {
+    // Not fatal — token cleanup below still needs to happen even if
+    // Google's local session clear fails (e.g. already signed out)
+    console.error("signOutGoogle failed:", err);
+  }
+
+  await SecureStore.deleteItemAsync("authToken");
+  useAuthStore.getState().logout();
 }

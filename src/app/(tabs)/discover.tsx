@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useGroups } from "../../api/groupQuery";
+import { useGroups } from "../../hooks/cravings-now-api/groupQuery";
 
 // ─── CravingsNow design tokens ──────────────────────────────────────────────
 // TODO: extract into a shared `@/constants/theme` file — duplicated here and

@@ -1,4 +1,4 @@
-import { ProductModifier } from "./product";
+import { Product, ProductModifier } from "./product";
 
 interface BranchSettings {
   branchTaxNumber: string;
@@ -45,36 +45,6 @@ type Category = {
 // ─── Raw API response type (snake_case, as Foodics sends it) ──────────────────
 
 // ─── Internal camelCase type ────────────────────────────────────────────────
-
-interface Product {
-  id: string;
-  sku: string;
-  barcode: string | null;
-  name: string;
-  nameLocalized: string | null;
-  description: string | null;
-  descriptionLocalized: string | null;
-  image: string | null;
-  isActive: boolean;
-  isStockProduct: boolean;
-  isNonRevenue: boolean;
-  isReady: boolean;
-  pricingMethod: number;
-  sellingMethod: number;
-  costingMethod: number;
-  preparationTime: number | null;
-  price: number;
-  cost: number | null;
-  calories: number | null;
-  walkingMinutesToBurnCalories: number | null;
-  isHighSalt: boolean;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
-  meta: Record<string, unknown> | null;
-  ingredients: unknown[];
-  reactivateAt: string | null;
-}
 
 interface ProductProps extends Product {
   category: Category;

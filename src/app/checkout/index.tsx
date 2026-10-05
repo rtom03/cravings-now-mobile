@@ -2,8 +2,9 @@ import { AppText } from "@/components/app-text";
 
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Image,
   ScrollView,
   StatusBar,
@@ -17,6 +18,13 @@ import {
 } from "react-native-safe-area-context";
 import { useCartStore } from "../../../store/cartStore";
 import AddressModal from "@/components/address-modal";
+import { useAddresses } from "@/hooks/cravings-now-api/address-query";
+import { useCreateOrder } from "@/hooks/cravings-now-api/order-mutation";
+import { getCurrentCoords } from "@/lib/location";
+import { buildOrderPayload } from "@/lib/buildOrderPayload";
+import { useAuthStore } from "../../../store/authStore";
+import * as Crypto from "expo-crypto";
+import Loading from "@/components/ui/loading";
 
 // ─── CravingsNow design tokens — from the style-guide cover frame ──────────
 // TODO: extract into a shared `@/constants/theme` file — duplicated across
@@ -145,6 +153,55 @@ export default function CheckoutScreen() {
   const { items, totalPrice, incrementQty, decrementQty, removeFromCart } =
     useCartStore();
 
+  const { data } = useAddresses();
+  // console.log(data);
+  const address = data?.[0];
+
+  const { user } = useAuthStore();
+
+  // console.log(user);
+
+  const location = {
+    latitude: Number(address?.latitude),
+    longitude: Number(address?.longitude),
+  };
+
+  const createOrder = useCreateOrder();
+  // items, total, customerId, customerAddressId, chargeIds, paymentMethodId, clearCart come from your cart/auth state
+
+  const idemKeyRef = useRef<string | null>(null);
+
+  // reset when the cart changes
+  useEffect(() => {
+    idemKeyRef.current = null;
+  }, [items, totalPrice]);
+
+  const onPlaceOrder = async () => {
+    if (createOrder.isPending) return;
+    idemKeyRef.current ??= Crypto.randomUUID();
+
+    try {
+      const payload = buildOrderPayload({
+        items,
+        location,
+        amount: total,
+        idempotencyKey: idemKeyRef.current,
+        customerEmail: user?.email ?? "",
+      });
+
+      const order = await createOrder.mutateAsync(payload);
+
+      router.push({
+        pathname: "/payment",
+        params: { url: order.paystackAuthUrl, orderId: order.id },
+      });
+    } catch (e) {
+      Alert.alert(
+        "Couldn't place order",
+        e instanceof Error ? e.message : "Please try again",
+      );
+    }
+  };
   const [addressModalVisible, setAddressModalVisible] =
     useState<boolean>(false);
 
@@ -160,6 +217,12 @@ export default function CheckoutScreen() {
 
   const subtotal: number = totalPrice();
   const total: number = subtotal + DELIVERY_FEE + SERVICE_FEE;
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  if (!isAuthenticated) {
+    router.replace("/(auth)/login");
+    return;
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.paper }}>
@@ -266,7 +329,7 @@ export default function CheckoutScreen() {
               >
                 <TouchableOpacity
                   onPress={() =>
-                    item.qty === 1
+                    item.quantity === 1
                       ? removeFromCart(item.id)
                       : decrementQty(item.id)
                   }
@@ -280,7 +343,7 @@ export default function CheckoutScreen() {
                     justifyContent: "center",
                   }}
                 >
-                  {item.qty === 1 ? (
+                  {item.quantity === 1 ? (
                     <Ionicons
                       name="trash-outline"
                       size={10}
@@ -297,7 +360,7 @@ export default function CheckoutScreen() {
                     color: COLORS.ink,
                   }}
                 >
-                  {item.qty}
+                  {item.quantity}
                 </AppText>
                 <TouchableOpacity
                   onPress={() => incrementQty(item.id)}
@@ -318,7 +381,7 @@ export default function CheckoutScreen() {
             <AppText
               style={{ fontSize: 12.5, fontWeight: "700", color: COLORS.ink }}
             >
-              {formatPrice(item.price * item.qty)}
+              {formatPrice(item.price * item.quantity)}
             </AppText>
           </View>
         ))}
@@ -372,8 +435,15 @@ export default function CheckoutScreen() {
           elevation: 6,
         }}
       >
-        <AppText style={{ color: "#fff", fontSize: 13.5, fontWeight: "700" }}>
-          Place order · {formatPrice(total)}
+        <AppText
+          style={{ color: "#fff", fontSize: 13.5, fontWeight: "700" }}
+          onPress={onPlaceOrder}
+        >
+          {createOrder.isPending ? (
+            <Loading />
+          ) : (
+            `Place order · ${formatPrice(total)}`
+          )}
         </AppText>
       </TouchableOpacity>
 

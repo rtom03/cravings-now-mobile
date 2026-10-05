@@ -1,18 +1,23 @@
-export interface ProductOption {
+interface ProductOption {
   id: string;
   foodicsId: string;
   sku: string;
   name: string;
   image: string | null;
   nameLocalized: string | null;
+  quantity: number;
   isActive: boolean;
   isInStock: boolean;
   price: number;
 }
 
-export interface ProductModifier {
+interface ProductModifier {
   id: string;
   name: string;
+  minimumOptions: number;
+  maximumOptions: number;
+  isSplittableInHalf?: boolean;
+  uniqueOptions?: boolean;
   options: ProductOption[];
 }
 
@@ -25,12 +30,16 @@ type Category = {
   image: string | null;
 };
 
-export interface Product {
+interface Product {
   id: string;
+  foodicsId: string;
+  foodicsSandBoxId: string;
   sku: string;
   barcode: string | null;
+
   name: string;
   nameLocalized: string | null;
+  groupName: string | null; // NEW — which brand this line belongs to, drives the split
   description: string | null;
   descriptionLocalized: string | null;
   image: string | null;
@@ -41,14 +50,18 @@ export interface Product {
   pricingMethod: number;
   sellingMethod: number;
   costingMethod: number;
+  preparationTime: number | null;
   price: number;
   cost: number | null;
   calories: number | null;
   walkingMinutesToBurnCalories: number | null;
   isHighSalt: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
   meta: Record<string, unknown> | null;
   ingredients: unknown[];
   reactivateAt: string | null;
-  category?: Category;
-  modifiers: ProductModifier[];
 }
+
+export { Product, ProductModifier, ProductOption };

@@ -29,10 +29,12 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { useCartStore } from "../../../store/cartStore";
-import { useProductsByGroupById } from "../../api/groupQuery";
 import MenuItemCard from "@/components/menu-item-card";
-import { fmt } from "../../../utils";
 import { ProductProps } from "@/types/brands";
+import { useProductsByGroupById } from "@/hooks/cravings-now-api/groupQuery";
+import { fmt } from "@/utils";
+import { toCartItem } from "@/lib/toCartItems";
+import { ProductModifier } from "@/types/product";
 
 // ─── CravingsNow design tokens — from the style-guide cover frame ──────────
 // TODO: extract into a shared `@/constants/theme` file — duplicated across
@@ -51,11 +53,6 @@ const COLORS = {
 };
 
 // ─── Real API shape (matches the JSON you pasted) ──────────────────────────
-interface ApiCategory {
-  id: string;
-  name: string;
-  image: string | null;
-}
 
 export interface ProductOption {
   id: string;
@@ -63,32 +60,27 @@ export interface ProductOption {
   sku: string;
   name: string;
   image: string | null;
-  nameLocalized: string | null;
   isActive: boolean;
   isInStock: boolean;
   price: number;
 }
 
-export interface ProductModifier {
-  id: string;
-  name: string;
-  minimumOptions: number;
-  maximumOptions: number;
-  isSplittableInHalf?: boolean;
-  uniqueOptions?: boolean;
-  options: ProductOption[];
-}
+export type SelectedOption = ProductOption & { quantity: number };
 
 // ─── UI shapes ──────────────────────────────────────────────────────────────
 
 export interface Item {
   id: string;
+  lineId: string; // product + selected options: identifies this exact cart line
   foodicsId: string;
+  foodicsSandBoxId: string;
   name: string;
   price: number;
   img?: string;
   desc: string;
   category?: string;
+  groupName: string;
+  quantity: number;
   option: ProductModifier[];
 }
 
@@ -98,28 +90,40 @@ interface CategorySection {
   items: Item[];
 }
 
-function toMenuItem(product: ProductProps): Item {
+// Every field on Item is used somewhere downstream — foodicsId and
+// groupName flow into toCartItem, quantity is what actually gets added.
+// This used to return an object missing all three, which is the root of
+// the "quantity doesn't work for plain items" bug: a quick-added item's
+// `.quantity` was `undefined`, not 1, because nothing here ever set it.
+function toMenuItem(product: ProductProps, groupName: string): Item {
   return {
     id: product.id,
+    foodicsId: product.foodicsId,
+    foodicsSandBoxId: product.foodicsSandBoxId,
     name: product.name,
     price: product.price,
     img: product.image ?? undefined,
     desc: product.description ?? "",
     category: product.category?.id,
+    groupName,
+    quantity: 1,
     // Not every product has modifiers — default to an empty array so
     // ItemDetailSheet can key off `.length` without extra null checks.
     option: product.modifiers ?? [],
   };
 }
 
-function groupProductsByCategory(products: ProductProps[]): CategorySection[] {
+function groupProductsByCategory(
+  products: ProductProps[],
+  groupName: string,
+): CategorySection[] {
   const sectionsByCategory = new Map<string, CategorySection>();
 
   for (const product of products) {
     if (!product.category?.id) continue;
 
     const existing = sectionsByCategory.get(product.category.id);
-    const item = toMenuItem(product);
+    const item = toMenuItem(product, groupName);
 
     if (existing) {
       existing.items.push(item);
@@ -147,14 +151,6 @@ const PROGRAMMATIC_SCROLL_SAFETY_MS = 900;
 const SCROLL_ARRIVAL_EPSILON = 4;
 
 // ─── Extracted + memoized so it doesn't re-render on every scroll tick ─────
-// The inline bar and the fixed-overlay bar below are two SEPARATE instances
-// of this component with two separate native ScrollViews — each one tracks
-// its own tabs' x-positions and scrolls itself to reveal the active tab
-// whenever activeCategoryId changes. Without this, whichever instance
-// wasn't visible when the tab changed stays scrolled to wherever it last
-// was — so when it fades in (the overlay) or comes back into flow (after
-// scrolling back up to the inline bar), it can show the wrong tab
-// highlighted until you touch it.
 const CategoryTabs = React.memo(function CategoryTabs({
   sections,
   activeCategoryId,
@@ -215,8 +211,6 @@ const CategoryTabs = React.memo(function CategoryTabs({
   );
 });
 
-// Same reasoning: the item list is the expensive part of the tree, so it
-// gets its own memoized component with stable callback props.
 const MenuSections = React.memo(function MenuSections({
   sections,
   onSectionLayout,
@@ -273,25 +267,10 @@ function InfoCol({ value, label }: { value: string; label: string }) {
   );
 }
 
-// Rough footprint of the floating cart bar below (padding + text line +
-// bottom margin) — used only to keep the last menu item from being hidden
-// behind it, not to size the bar itself.
 const CART_BAR_FOOTPRINT = 92;
-
-const roundBtnStyle = {
-  width: 34,
-  height: 34,
-  borderRadius: 17,
-  backgroundColor: "rgba(255,255,255,0.92)",
-  alignItems: "center" as const,
-  justifyContent: "center" as const,
-};
 
 export default function DetailsScreen() {
   const router = useRouter();
-  // The floating cart bar below is position: "absolute", which — same bug
-  // as CartScreen and ItemDetailSheet — ignores any ancestor's safe-area
-  // padding entirely, so it needs insets.bottom added explicitly.
   const insets = useSafeAreaInsets();
   const { id, name, hero_img, ratings } = useLocalSearchParams<{
     id: string;
@@ -303,10 +282,10 @@ export default function DetailsScreen() {
   }>();
 
   const [sheetVisible, setSheetVisible] = useState(false);
-  const [qty, setQty] = useState(1);
-  const [selectedItem, setSelectedItem] = useState<
-    (Item & { qty: number }) | null
-  >(null);
+  // One quantity field, not two. selectedItem IS an Item, and Item already
+  // owns `quantity` — there's no second `qty` sitting next to it that
+  // something could read instead by mistake.
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const { addToCart, items: cartItems, totalPrice } = useCartStore();
 
   // TODO: wire to whatever the checkout flow expects — this only drives the
@@ -317,7 +296,10 @@ export default function DetailsScreen() {
 
   const { data } = useProductsByGroupById(id);
 
-  const sections = useMemo(() => groupProductsByCategory(data ?? []), [data]);
+  const sections = useMemo(
+    () => groupProductsByCategory(data ?? [], name),
+    [data, name],
+  );
 
   // ─── Scrollspy state ────────────────────────────────────────────────────
   const scrollViewRef = useRef<Animated.ScrollView>(null);
@@ -415,10 +397,6 @@ export default function DetailsScreen() {
 
         if (isProgrammaticScroll.current) {
           const target = programmaticScrollTarget.current;
-          // Only trust the scroll position — and let normal scrollspy
-          // logic resume — once we've actually arrived. Guessing from a
-          // timer instead of this is what caused the highlight to flicker
-          // back to the previous section before correcting itself.
           if (
             target === null ||
             Math.abs(currentY - target) > SCROLL_ARRIVAL_EPSILON
@@ -453,7 +431,6 @@ export default function DetailsScreen() {
 
       scrollViewRef.current?.scrollTo({ y: target, animated: true });
 
-      // Fallback only — see SCROLL_ARRIVAL_EPSILON comment above.
       programmaticScrollTimeout.current = setTimeout(
         releaseProgrammaticScrollLock,
         PROGRAMMATIC_SCROLL_SAFETY_MS,
@@ -462,18 +439,30 @@ export default function DetailsScreen() {
     [fixedOverlayHeight, releaseProgrammaticScrollLock],
   );
 
-  const handleQuantityChange = (newQty: number) => {
-    setSelectedItem((prev) => (prev ? { ...prev, qty: newQty } : null));
+  // Updates the one real quantity field. ItemDetailSheet's stepper calls
+  // this, and because selectedItem.quantity is the SAME field that gets
+  // read when the item is actually added to the cart, what you see on the
+  // stepper is guaranteed to be what gets added — there's no second,
+  // silently-stale field for the cart logic to read from instead.
+  const handleQuantityChange = (newQuantity: number) => {
+    setSelectedItem((prev) =>
+      prev ? { ...prev, quantity: newQuantity } : null,
+    );
   };
 
   const handleItemPress = useCallback((item: Item) => {
-    setSelectedItem({ ...item, qty: 1 });
+    setSelectedItem({ ...item, quantity: 1 });
     setSheetVisible(true);
   }, []);
 
+  // Quick-add path for items with no required modifiers (MenuItemCard
+  // decides when this is safe to call directly instead of opening the
+  // sheet). item.quantity is reliably 1 here because toMenuItem sets it —
+  // before that fix this was undefined, and addToCart was being called
+  // with no quantity at all.
   const handleAddItem = useCallback(
     (item: Item) => {
-      addToCart(item);
+      addToCart(toCartItem(item), item.quantity);
     },
     [addToCart],
   );
@@ -500,16 +489,12 @@ export default function DetailsScreen() {
             cartItems.length > 0 ? CART_BAR_FOOTPRINT + insets.bottom : 0,
         }}
       >
-        {/* index 0 — hero image */}
         <View style={{ width: "100%", height: 200 }}>
           <Image
             source={{ uri: hero_img }}
             style={{ width: "100%", height: "100%" }}
             resizeMode="cover"
           />
-          {/* NOTE: if BrandHeader already renders its own back button once
-              collapsed, this may double up with it — remove whichever one
-              doesn't match once BrandHeader's internals are in front of me. */}
           <View
             style={{
               position: "absolute",
@@ -522,7 +507,6 @@ export default function DetailsScreen() {
           ></View>
         </View>
 
-        {/* index 1 — brand header, fulfillment tabs, info strip */}
         <View
           style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4 }}
         >
@@ -611,7 +595,6 @@ export default function DetailsScreen() {
           )}
         </View>
 
-        {/* index 2 — inline category tab bar, in normal scroll flow */}
         <View
           onLayout={handleTabBarLayout}
           style={{
@@ -628,7 +611,6 @@ export default function DetailsScreen() {
           />
         </View>
 
-        {/* index 3+ — one section per category */}
         <MenuSections
           sections={sections}
           onSectionLayout={handleSectionLayout}
@@ -637,7 +619,6 @@ export default function DetailsScreen() {
         />
       </Animated.ScrollView>
 
-      {/* Fixed overlay tab bar */}
       <Animated.View
         pointerEvents={scrolledPastTabBar ? "box-none" : "none"}
         style={{
@@ -663,32 +644,29 @@ export default function DetailsScreen() {
         deal={selectedItem}
         visible={sheetVisible}
         onClose={() => setSheetVisible(false)}
-        quantity={qty}
         onQuantityChange={handleQuantityChange}
-        onAddToCart={(selectedOptions) => {
+        onAddToCart={(selectedQuantities) => {
           if (selectedItem) {
-            const optionsTotal = selectedItem.option.reduce((sum, modifier) => {
-              const selectedIds = selectedOptions[modifier.id] ?? [];
-              const modifierTotal = modifier.options
-                .filter((o) => selectedIds.includes(o.id))
-                .reduce((s, o) => s + o.price, 0);
-              return sum + modifierTotal;
-            }, 0);
-
-            // TODO: cartStore's item shape isn't visible from here — once it
-            // can carry the chosen modifier options, pass `selectedOptions`
-            // through too so cart/checkout can display and re-price them,
-            // not just this flattened unit price.
-            addToCart(
-              {
-                id: selectedItem.id,
-                name: selectedItem.name,
-                price: selectedItem.price + optionsTotal,
-                img: selectedItem.img,
-                desc: selectedItem.desc,
-                modifiers: selectedItem?.option,
+            // Build the list of what was ACTUALLY picked, with how many of
+            // each — not every option that exists. Previously this used
+            // `.flatMap((o) => o.options!)`, which ignored selection
+            // entirely and sent every option from every modifier regardless
+            // of whether the person chose it.
+            const chosenOptions: SelectedOption[] = selectedItem.option.flatMap(
+              (modifier) => {
+                const quantities = selectedQuantities[modifier.id] ?? {};
+                return modifier.options
+                  .filter((option) => (quantities[option.id] ?? 0) > 0)
+                  .map((option) => ({
+                    ...option,
+                    quantity: quantities[option.id],
+                  }));
               },
-              selectedItem.qty,
+            );
+
+            addToCart(
+              toCartItem(selectedItem, chosenOptions),
+              selectedItem.quantity,
             );
           }
           setSheetVisible(false);

@@ -1,26 +1,41 @@
-export interface CreateOrderInput {
+import { ProductModifier } from "./product";
+
+// types/order.ts
+export interface CartItem {
+  id: string;
+  foodicsId: string;
+  name: string;
+  price: number;
+  img?: string;
+  desc: string;
+  quantity: number;
+  groupName: string | null; // NEW — which brand this line belongs to, drives the split
+  modifiers?: ProductModifier[];
+}
+
+export interface CreateOrderPayload {
   customerId?: string;
   customerAddressId?: string;
+  customerEmail: string;
+  idempotencyKey: string;
   location: { latitude: number; longitude: number };
-  couponCode?: string;
-  dueAt?: string;
-
-  products: Array<{
+  products: {
     productId: string;
-    foodicsId?: string;
-    groupName: string | null; // NEW — which brand this line belongs to, drives the split
     quantity: number;
-    kitchenNotes?: string;
-    options: Array<{
+    foodicsId: string;
+    groupName: string | null; // NEW — which brand this line belongs to, drives the split
+    options?: {
       modifierOptionId: string;
       quantity: number;
-      foodicsId?: string;
-    }>;
-  }>;
+      foodicsId: string;
+    }[];
+  }[];
+  charges?: { chargeId: string }[];
+  payment?: { paymentMethodId: string; amount: number };
+}
 
-  payment: {
-    paymentMethodId: string;
-    amount: number;
-    tips?: number;
-  };
+export interface CreateOrderResponse {
+  id: string;
+  totalPrice: number;
+  paystackAuthUrl: string;
 }

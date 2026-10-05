@@ -12,17 +12,20 @@ type AuthState = {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  setAuth: (user: User, token: string) => void;
-  logout: () => void;
-  hydrate: () => void;
+  isHydrated: boolean;
+  setAuth: (user: User, token: string) => Promise<void>;
+  logout: () => Promise<void>;
+  hydrate: () => Promise<void>;
 };
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   token: null,
   isAuthenticated: false,
+  isHydrated: false,
 
-  setAuth: (user, token) => {
+  setAuth: async (user, token) => {
+    await SecureStore.setItemAsync("authToken", token);
     set({ user, token, isAuthenticated: true });
   },
 
@@ -32,15 +35,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   hydrate: async () => {
-    const token = await SecureStore.getItemAsync("authToken");
-    if (!token) return;
-
     try {
-      const { user } = await apiFetch<{ user: User }>("/user/me");
+      const token = await SecureStore.getItemAsync("authToken");
+      if (!token) return;
+      const { user } = await apiFetch<{ user: User }>("/customer/me");
       set({ user, token, isAuthenticated: true });
     } catch {
       await SecureStore.deleteItemAsync("authToken");
       set({ user: null, token: null, isAuthenticated: false });
+    } finally {
+      set({ isHydrated: true });
     }
   },
 }));

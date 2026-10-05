@@ -5,6 +5,10 @@ import { Href, useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView, StatusBar, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuthStore } from "../../../store/authStore";
+import { logout } from "@/lib/api/auth";
+import ConfirmationModal from "@/components/shared/confirmation-modal";
+import { fomarlizeName, getInitials } from "@/utils";
 
 // ─── CravingsNow design tokens — from the style-guide cover frame ──────────
 // TODO: extract into a shared `@/constants/theme` file — duplicated across
@@ -103,14 +107,36 @@ function ProfileListItem({
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const user = useAuthStore((s) => s.user); // re-renders on change
+
+  console.log(user);
+
   const [addressModalVisible, setAddressModalVisible] =
     useState<boolean>(false);
+  const [logoutModalVisible, setLogoutModalVisible] = useState<boolean>(false);
 
   // TODO: no auth/user store exists yet — replace with real signed-in user
   // data once one does, rather than showing a placeholder as if it's real.
-  const userName = "Your name";
-  const userEmail = "your@email.com";
-  const initials = "—";
+
+  const initials = getInitials(user?.name);
+  const userName = fomarlizeName(user?.name);
+  const userEmail = user?.email || "your@email.com";
+
+  // Runs only once the confirmation dialog is accepted. Navigates to login
+  // regardless of whether the API call itself succeeds — if logout() fails
+  // server-side, still clearing the person out locally is the safer
+  // default. Flag/replace this if the backend needs to be treated as the
+  // source of truth instead.
+  const handleLogout = async () => {
+    setLogoutModalVisible(false);
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      router.replace("/(auth)/login");
+    }
+  };
 
   // TODO: no orders/addresses/favourites count source yet — "—" instead of
   // a fabricated number until real data is wired up.
@@ -195,13 +221,7 @@ export default function ProfileScreen() {
           label="Saved addresses"
           onPress={() => setAddressModalVisible(true)}
         />
-        <ProfileListItem
-          icon="card-outline"
-          label="Payment methods"
-          onPress={() => {
-            // TODO: no payment-methods screen exists yet.
-          }}
-        />
+
         <ProfileListItem
           icon="notifications-outline"
           label="Notifications"
@@ -221,17 +241,25 @@ export default function ProfileScreen() {
           label="Log out"
           tone="danger"
           showDivider={false}
-          onPress={() => {
-            router.replace("/(auth)/login");
-            // TODO: no auth store exists yet — wire real sign-out here,
-            // then navigate to the (currently commented-out) login route.
-          }}
+          onPress={() => setLogoutModalVisible(true)}
         />
       </ScrollView>
 
       <AddressModal
         visible={addressModalVisible}
         onClose={() => setAddressModalVisible(false)}
+      />
+
+      <ConfirmationModal
+        visible={logoutModalVisible}
+        title="Log out?"
+        message="Are you sure you want to logout?"
+        tone="danger"
+        icon="log-out-outline"
+        confirmLabel="Yes"
+        cancelLabel="No"
+        onCancel={() => setLogoutModalVisible(false)}
+        onConfirm={handleLogout}
       />
     </SafeAreaView>
   );
