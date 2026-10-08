@@ -1,7 +1,7 @@
 import { AppText } from "@/components/app-text";
 
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -152,6 +152,26 @@ export default function CheckoutScreen() {
   const insets = useSafeAreaInsets();
   const { items, totalPrice, incrementQty, decrementQty, removeFromCart } =
     useCartStore();
+
+  const naira = (kobo: number) =>
+    (kobo / 100).toLocaleString("en-NG", {
+      style: "currency",
+      currency: "NGN",
+    });
+
+  const {
+    subtotalKobo,
+    deliveryFeeKobo,
+    paystackServiceKobo,
+    totalKobo,
+    taxKobo,
+  } = useLocalSearchParams<{
+    subtotalKobo: number;
+    deliveryFeeKobo: number;
+    paystackServiceKobo: number;
+    totalKobo: number;
+    taxKobo: number;
+  }>();
 
   const { data } = useAddresses();
   // console.log(data);
@@ -406,18 +426,16 @@ export default function CheckoutScreen() {
 
         {/* ── Order summary ── */}
         <View style={{ marginTop: 20 }}>
-          <SummaryRow label="Subtotal" value={formatPrice(subtotal)} />
-          <SummaryRow label="Delivery fee" value={formatPrice(DELIVERY_FEE)} />
-          <SummaryRow label="Service fee" value={formatPrice(SERVICE_FEE)} />
-          <SummaryRow label="Total" value={formatPrice(total)} emphasize />
+          <SummaryRow label="Subtotal" value={naira(subtotalKobo)} />
+          <SummaryRow label="Delivery fee" value={naira(0)} />
+          <SummaryRow label="Service fee" value={naira(paystackServiceKobo)} />
+          <SummaryRow label="Total" value={naira(totalKobo)} emphasize />
         </View>
       </ScrollView>
 
       {/* ── Place order CTA ── */}
       <TouchableOpacity
-        onPress={() => {
-          // TODO: wire to the real order-placement mutation once one exists.
-        }}
+        onPress={onPlaceOrder}
         activeOpacity={0.85}
         style={{
           position: "absolute",
@@ -435,14 +453,11 @@ export default function CheckoutScreen() {
           elevation: 6,
         }}
       >
-        <AppText
-          style={{ color: "#fff", fontSize: 13.5, fontWeight: "700" }}
-          onPress={onPlaceOrder}
-        >
+        <AppText style={{ color: "#fff", fontSize: 13.5, fontWeight: "700" }}>
           {createOrder.isPending ? (
             <Loading />
           ) : (
-            `Place order · ${formatPrice(total)}`
+            `Place order · ${naira(totalKobo)}`
           )}
         </AppText>
       </TouchableOpacity>

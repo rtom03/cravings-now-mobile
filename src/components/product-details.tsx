@@ -70,6 +70,7 @@ function describeModifier(modifier: ProductModifier): string {
 const EMPTY_QUANTITIES: Record<string, number> = {};
 
 export default function ItemDetailSheet(props: DealBottomSheetProps) {
+  // console.log(props);
   return (
     <SafeModal
       visible={props.visible}

@@ -6,6 +6,7 @@ export const useGroups = (enabled = true) => {
     queryKey: ["groups"],
     queryFn: async () => {
       const res = await getGroups();
+
       return res; // unwrap the { Products: [...] } envelope
     },
     enabled, // query won't fire until this is true

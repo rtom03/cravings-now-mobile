@@ -1,6 +1,7 @@
 interface ProductOption {
   id: string;
   foodicsId: string;
+  foodicsSandBoxId?: string;
   sku: string;
   name: string;
   image: string | null;

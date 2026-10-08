@@ -4,6 +4,7 @@ import { ProductModifier } from "./product";
 export interface CartItem {
   id: string;
   foodicsId: string;
+  foodicsSandBoxId?: string;
   name: string;
   price: number;
   img?: string;
@@ -23,11 +24,13 @@ export interface CreateOrderPayload {
     productId: string;
     quantity: number;
     foodicsId: string;
+    foodicsSandBoxId?: string;
     groupName: string | null; // NEW — which brand this line belongs to, drives the split
     options?: {
       modifierOptionId: string;
       quantity: number;
       foodicsId: string;
+      foodicsSandBoxId?: string;
     }[];
   }[];
   charges?: { chargeId: string }[];
@@ -38,4 +41,16 @@ export interface CreateOrderResponse {
   id: string;
   totalPrice: number;
   paystackAuthUrl: string;
+}
+
+export interface CreateOrderQuoteResponse {
+  subtotalKobo: number;
+  discountKobo: number | null;
+  couponCode: string | null;
+  taxKobo: number;
+  taxRatePct: number;
+  deliveryFeeKobo: number;
+  paystackServiceKobo: number;
+  serviceFeeKobo?: number;
+  totalKobo: number;
 }

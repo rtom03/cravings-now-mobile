@@ -1,5 +1,6 @@
 import { AppText } from "@/components/app-text";
 import { env } from "@/config/env";
+import { useUserLocation } from "@/hooks/use-user-location";
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useLocalSearchParams, useRouter } from "expo-router";
 import { useRef, useState } from "react";
@@ -48,6 +49,8 @@ interface Prediction {
 export default function AddressSearchScreen() {
   const router = useRouter();
   const { lat, lng } = useLocalSearchParams<{ lat?: string; lng?: string }>();
+
+  const { coords, status, place, openSettings } = useUserLocation();
 
   const [query, setQuery] = useState("");
   const [predictions, setPredictions] = useState<Prediction[]>([]);
@@ -212,9 +215,9 @@ export default function AddressSearchScreen() {
               borderBottomColor: COLORS.n100,
             }}
           >
-            <Ionicons name="location-outline" size={18} color={COLORS.n600} />
-            <Text style={{ flex: 1, fontSize: 13, color: COLORS.ink }}>
-              {item.display_name}
+            <Ionicons name="location-outline" size={18} color="black" />
+            <Text style={{ flex: 1, fontSize: 13, color: "black" }}>
+              {place?.name}
             </Text>
           </TouchableOpacity>
         )}

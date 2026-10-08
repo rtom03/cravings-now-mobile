@@ -71,7 +71,7 @@ export type SelectedOption = ProductOption & { quantity: number };
 
 export interface Item {
   id: string;
-  lineId: string; // product + selected options: identifies this exact cart line
+  lineId?: string; // product + selected options: identifies this exact cart line
   foodicsId: string;
   foodicsSandBoxId: string;
   name: string;

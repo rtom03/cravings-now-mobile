@@ -2,6 +2,7 @@ import { Href, Link, Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import {
+  Button,
   Image,
   ScrollView,
   StatusBar,
@@ -15,6 +16,11 @@ import {
 } from "react-native-safe-area-context";
 import { useCartStore } from "../../../store/cartStore";
 import { AppText } from "@/components/app-text";
+import { useCreateOrderQuote } from "@/hooks/cravings-now-api/order-mutation";
+import { buildOrderPayload } from "@/lib/buildOrderPayload";
+import { useAddresses } from "@/hooks/cravings-now-api/address-query";
+import Loading from "@/components/ui/loading";
+import { useUserLocation } from "@/hooks/use-user-location";
 
 // ─── CravingsNow design tokens — from the style-guide cover frame ──────────
 // TODO: extract into a shared `@/constants/theme` file — duplicated across
@@ -56,6 +62,52 @@ export default function CartScreen() {
 
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
   const isEmpty = items.length === 0;
+
+  const { data } = useAddresses();
+
+  const address = data?.[0];
+  const { coords, status, openSettings } = useUserLocation();
+
+  if (status === "blocked")
+    return (
+      <Button title="Enable location in Settings" onPress={openSettings} />
+    );
+  if (coords) console.log(coords.lat, coords.lng);
+  // console.log(items);
+
+  const location = {
+    latitude: Number(coords?.lat),
+    longitude: Number(coords?.lng),
+  };
+
+  // console.log(location);
+  const createOrderQuote = useCreateOrderQuote();
+
+  const onProceedToCheckout = async () => {
+    if (createOrderQuote.isPending) return;
+    try {
+      const payload = buildOrderPayload({
+        items,
+        location,
+      });
+
+      const orderQuote = await createOrderQuote.mutateAsync(payload);
+
+      router.push({
+        pathname: "/checkout",
+        params: {
+          subtotalKobo: orderQuote.subtotalKobo,
+          // discountKobo: orderQuote.discountKobo
+          // couponCode: string | null;
+          taxKobo: orderQuote.taxKobo,
+          taxRatePct: orderQuote.taxRatePct,
+          deliveryFeeKobo: orderQuote.deliveryFeeKobo,
+          paystackServiceKobo: orderQuote.paystackServiceKobo,
+          totalKobo: orderQuote.totalKobo,
+        },
+      });
+    } catch (error) {}
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.paper }}>
@@ -140,7 +192,7 @@ export default function CartScreen() {
             Add items from your favorite brands to get started.
           </AppText>
           {/* TODO: confirm the Brands tab's actual route segment. */}
-          <Link href={"/(tabs)/brands" as Href} asChild>
+          <Link href={"/(tabs)/discover" as Href} asChild>
             <TouchableOpacity
               style={{
                 backgroundColor: COLORS.signal,
@@ -323,42 +375,47 @@ export default function CartScreen() {
 
           {/* TODO: this repo's existing checkout route is "/proceed" — kept
               as-is rather than guessing a "/checkout" rename. */}
-          <Link href={"/checkout" as Href} asChild>
-            <TouchableOpacity
-              style={{
-                position: "absolute",
-                left: 16,
-                right: 16,
-                // The actual fix: without + insets.bottom, this sits
-                // exactly 16px from the physical screen edge, ignoring the
-                // home indicator entirely.
-                bottom: 16 + insets.bottom,
-                backgroundColor: COLORS.signal,
-                borderRadius: 16,
-                paddingVertical: 15,
-                paddingHorizontal: 20,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                shadowColor: COLORS.signal,
-                shadowOpacity: 0.35,
-                shadowRadius: 12,
-                shadowOffset: { width: 0, height: 6 },
-                elevation: 6,
-              }}
-            >
-              <AppText
-                style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}
-              >
-                {formatPrice(totalPrice())}
-              </AppText>
-              <AppText
-                style={{ color: "#fff", fontSize: 13.5, fontWeight: "700" }}
-              >
-                Proceed to checkout →
-              </AppText>
-            </TouchableOpacity>
-          </Link>
+          <TouchableOpacity
+            onPress={onProceedToCheckout}
+            style={{
+              position: "absolute",
+              left: 16,
+              right: 16,
+              // The actual fix: without + insets.bottom, this sits
+              // exactly 16px from the physical screen edge, ignoring the
+              // home indicator entirely.
+              bottom: 16 + insets.bottom,
+              backgroundColor: COLORS.signal,
+              borderRadius: 16,
+              paddingVertical: 15,
+              paddingHorizontal: 20,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              shadowColor: COLORS.signal,
+              shadowOpacity: 0.35,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: 6 },
+              elevation: 6,
+            }}
+          >
+            {createOrderQuote.isPending ? (
+              <Loading />
+            ) : (
+              <View>
+                <AppText
+                  style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}
+                >
+                  {formatPrice(totalPrice())}
+                </AppText>
+                <AppText
+                  style={{ color: "#fff", fontSize: 13.5, fontWeight: "700" }}
+                >
+                  Proceed to checkout →
+                </AppText>
+              </View>
+            )}
+          </TouchableOpacity>
         </>
       )}
     </SafeAreaView>

@@ -2,6 +2,7 @@ import { Link } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Button,
   Image,
   ScrollView,
   StatusBar,
@@ -16,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "../../../store/authStore";
 import { useGroups } from "@/hooks/cravings-now-api/groupQuery";
 import { fomarlizeName, getGreeting } from "@/utils";
+import { useUserLocation } from "@/hooks/use-user-location";
 
 // ─── CravingsNow design tokens — from the style-guide cover frame ──────────
 // TODO: move into `@/constants` once the rest of the app migrates off the
@@ -69,6 +71,13 @@ export default function HomeScreen() {
   const user = useAuthStore((s) => s.user); // re-renders on change
   // console.log(user?.name);
   const greeting = getGreeting();
+  const { coords, status, place, openSettings } = useUserLocation();
+
+  if (status === "blocked")
+    return (
+      <Button title="Enable location in Settings" onPress={openSettings} />
+    );
+  if (coords) console.log(coords.lat, coords.lng);
 
   return (
     <SafeAreaView
@@ -101,7 +110,7 @@ export default function HomeScreen() {
             <AppText
               style={{ fontSize: 16, fontWeight: "700", color: COLORS.ink }}
             >
-              Lekki Phase 1
+              {place?.name}
             </AppText>
             <Ionicons name="chevron-down" size={14} color={COLORS.ink} />
           </TouchableOpacity>

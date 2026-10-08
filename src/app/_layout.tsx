@@ -65,10 +65,14 @@ function RootLayoutNav() {
             <Stack.Screen name="checkout" options={{ headerShown: false }} />
             <Stack.Screen name="payment" options={{ headerShown: false }} />
             <Stack.Screen name="order" options={{ headerShown: false }} />
+            <Stack.Screen name="tracking" options={{ headerShown: false }} />
 
             <Stack.Screen name="brand/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="address/new" options={{ headerShown: false }} />
-            <Stack.Screen name="discover/" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="(tabs)/discover/"
+              options={{ headerShown: false }}
+            />
 
             {/*  <Stack.Screen name="login" options={{ headerShown: false }} /> */}
 

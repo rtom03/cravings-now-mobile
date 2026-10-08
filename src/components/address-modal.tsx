@@ -13,6 +13,7 @@ import SafeModal from "./shared/safe-modal";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useAddresses } from "@/hooks/cravings-now-api/address-query";
+import { useUserLocation } from "@/hooks/use-user-location";
 
 // ─── CravingsNow design tokens ──────────────────────────────────────────────
 // TODO: extract into a shared `@/constants/theme` file — duplicated across
@@ -134,59 +135,30 @@ export default function AddressModal({
   const insets = useSafeAreaInsets();
   const { data: addresses } = useAddresses();
 
-  // console.log(addresses);
+  const { coords, setCoords, place, status } = useUserLocation();
 
-  const [coords, setCoords] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
-  const [currentLocationLabel, setCurrentLocationLabel] = useState<string>(
-    "Detecting location…",
-  );
+  // console.log(addresses);
 
   // Only look up location while the modal is actually open, and guard
   // against setting state after it's been closed/unmounted mid-request.
   useEffect(() => {
-    if (!visible) return;
-    let cancelled = false;
-
+    if (status !== "granted") return;
+    let sub: Location.LocationSubscription;
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        if (!cancelled) setCurrentLocationLabel("Location permission denied");
-        return;
-      }
-
-      const position = await Location.getCurrentPositionAsync({});
-      if (cancelled) return;
-      setCoords({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      });
-
-      // const [place] = await Location.reverseGeocodeAsync({
-      //   latitude: position.coords.latitude,
-      //   longitude: position.coords.longitude,
-      // });
-      // if (!cancelled) {
-      //   const label = [place?.street, place?.name, place?.city]
-      //     .filter(Boolean)
-      //     .join(", ");
-      //   setCurrentLocationLabel(label || "Current location");
-      // }
+      sub = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.Balanced, distanceInterval: 25 },
+        (p) => setCoords({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      );
     })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [visible]);
+    return () => sub?.remove();
+  }, [status]);
 
   // A real map image, centered on wherever `coords` currently points — the
   // pin overlay below is drawn on top and stays visually centered, which
   // together read as "the map, at your location" without needing a full
   // interactive map library for what's otherwise a static preview.
   const staticMapUrl = coords
-    ? `https://mapmap.ai/api/static-map?center=${coords.longitude},${coords.latitude}&zoom=16&size=640x400&markers=${coords.longitude},${coords.latitude}`
+    ? `https://mapmap.ai/api/static-map?center=${coords.lng},${coords.lat}&zoom=16&size=640x400&markers=${coords.lng},${coords.lat}`
     : null;
   // console.log(staticMapUrl);
   const goToAddressSearch = () => {
@@ -196,7 +168,7 @@ export default function AddressModal({
       // Biases Google's search results toward the person's current area
       // rather than searching blind.
       params: coords
-        ? { lat: String(coords.latitude), lng: String(coords.longitude) }
+        ? { lat: String(coords.lat), lng: String(coords.lng) }
         : undefined,
     });
   };
@@ -275,7 +247,7 @@ export default function AddressModal({
             }}
           >
             <AppText style={{ fontSize: 11, fontWeight: "600", color: "#fff" }}>
-              {currentLocationLabel}
+              {place?.name}
             </AppText>
           </View>
 
@@ -337,7 +309,7 @@ export default function AddressModal({
               <AddressRow
                 icon="navigate-outline"
                 label="Current location"
-                detail={currentLocationLabel}
+                detail={place?.name!}
                 warning="Missing address details"
               />
             </TouchableOpacity>

@@ -26,19 +26,14 @@ export default function PaymentScreen() {
       clearCart();
       qc.invalidateQueries({ queryKey: ["orders"] });
     }
-    router.replace({ pathname: "/order/order-status", params: { orderId } });
+    router.replace({ pathname: "/tracking", params: { orderId } });
   };
 
   return (
     <WebView
       source={{ uri: url }}
-      startInLoadingState
-      renderLoading={() => (
-        <View style={{ flex: 1, justifyContent: "center" }}>
-          <ActivityIndicator />
-        </View>
-      )}
       onShouldStartLoadWithRequest={(req) => {
+        // console.log("SHOULD_START", req.url);
         if (req.url.startsWith(CALLBACK_PREFIX)) {
           finish("success");
           return false;
@@ -49,6 +44,14 @@ export default function PaymentScreen() {
         }
         return true;
       }}
+      onNavigationStateChange={(s) => {
+        console.log("NAV", s.url);
+        if (s.url.startsWith(CALLBACK_PREFIX)) finish("success");
+      }}
+      onError={(e) => console.log("ERR", e.nativeEvent)}
+      onHttpError={(e) =>
+        console.log("HTTP_ERR", e.nativeEvent.statusCode, e.nativeEvent.url)
+      }
     />
   );
 }

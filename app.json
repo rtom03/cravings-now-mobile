@@ -25,6 +25,12 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "We use your location to find nearby branches and deliver to you."
+        }
+      ],
       "expo-router",
       [
         "expo-splash-screen",
@@ -38,6 +44,7 @@
       "@react-native-google-signin/google-signin",
       "expo-secure-store"
     ],
+
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

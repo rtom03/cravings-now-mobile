@@ -1,9 +1,13 @@
 import { Groups, BrandProducts, Product } from "@/types/brands";
-import { CreateOrderPayload, CreateOrderResponse } from "@/types/order";
+import {
+  CreateOrderPayload,
+  CreateOrderQuoteResponse,
+  CreateOrderResponse,
+} from "@/types/order";
 import * as SecureStore from "expo-secure-store";
 
-export const BASE_URL = "http://192.168.1.179:8000/api";
-// export const BASE_URL = "http://192.168.15.131:8000/api";
+// export const BASE_URL = "http://192.168.1.179:8000/api";
+export const BASE_URL = "http://192.168.15.159:8000/api";
 
 // export const BASE_URL = "http://172.20.10.2:8000/api";
 // export const BASE_URL = "http://192.168.88.48:8000/api";
@@ -211,6 +215,15 @@ const createOrder = (
   });
 };
 
+const createOrderQuote = (
+  payload: Omit<CreateOrderPayload, "idempotencyKey" & "customerEmail">,
+): Promise<CreateOrderQuoteResponse> => {
+  return apiFetch("/orders/quote", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+};
+
 export {
   getGroups,
   getProductsByGroupName,
@@ -219,4 +232,5 @@ export {
   updateAddress,
   deleteAddress,
   createOrder,
+  createOrderQuote,
 };
