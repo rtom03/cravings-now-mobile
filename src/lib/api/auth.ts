@@ -1,7 +1,7 @@
 import { apiFetch } from "@/services/api";
 import { signInWithGoogle, signOutGoogle } from "../googleAuth";
 import * as SecureStore from "expo-secure-store";
-import { useAuthStore } from "../../../store/authStore";
+import { useAuthStore } from "../../store/authStore";
 
 type GoogleAuthResponse = {
   token: string;

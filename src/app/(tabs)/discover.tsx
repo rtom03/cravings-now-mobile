@@ -12,6 +12,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useGroups } from "../../hooks/cravings-now-api/groupQuery";
+import { useProducts } from "@/hooks/cravings-now-api/product-query";
+import React, { useCallback, useMemo } from "react";
+import { Product, ProductWithOptions } from "@/types/product";
+import { useItemSheet } from "@/hooks/use-item-sheet";
+import { Item, toMenuItem } from "../brand/[id]";
+import ItemDetailSheet from "@/components/product-details";
 
 // ─── CravingsNow design tokens ──────────────────────────────────────────────
 // TODO: extract into a shared `@/constants/theme` file — duplicated here and
@@ -50,84 +56,192 @@ interface Group {
   logo: string | null;
 }
 
-// TODO: replace with a real cross-brand "featured products" endpoint —
-// these placeholders exist to keep the layout in step with the design
-// frame until that data is available.
-const MOST_LOVED = [
-  {
-    id: "ml1",
-    name: "Original Glazed Dozen",
-    brand: "Krispy Kreme",
-    price: 4500,
-    emoji: "🍩",
-    tint: "#FCE3C6",
-  },
-  {
-    id: "ml2",
-    name: "Double Cheese Stack",
-    brand: "Burger Nation",
-    price: 3200,
-    emoji: "🍔",
-    tint: "#F6D9DE",
-  },
-  {
-    id: "ml3",
-    name: "Cookies & Cream Tub",
-    brand: "Scoopd",
-    price: 2800,
-    emoji: "🍦",
-    tint: "#D9ECE0",
-  },
-];
-
-const OCCASIONS = [
-  { label: "Christmas", emoji: "🎄" },
-  { label: "Eid", emoji: "🌙" },
-  { label: "Thanksgiving", emoji: "🦃" },
-  { label: "Valentine", emoji: "💝" },
-];
-
-// TODO: same placeholder caveat as MOST_LOVED — swap in the real endpoint,
-// likely filterable by the OCCASIONS chips above.
-const SEASON_SPECIALS = [
-  {
-    id: "ss1",
-    name: "Christmas Sprinkle Box",
-    brand: "Krispy Kreme",
-    price: 5200,
-    emoji: "🍩",
-    tint: "#F3D9DC",
-    occasion: "🎄",
-  },
-  {
-    id: "ss2",
-    name: "Eid Family Bundle",
-    brand: "Burger Nation",
-    price: 9900,
-    emoji: "🍔",
-    tint: "#E9E3D8",
-    occasion: "🌙",
-  },
-  {
-    id: "ss3",
-    name: "Valentine Duo Sundae",
-    brand: "Scoopd",
-    price: 3400,
-    emoji: "🍦",
-    tint: "#F6D9E4",
-    occasion: "💝",
-  },
-];
-
 // Hermes without the full ICU build doesn't support toLocaleString grouping,
 // so comma-separate manually rather than risk "4500" instead of "4,500".
 function formatNaira(amount: number) {
   return `₦${amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
 }
+// Only the fields this screen reads. TODO: move into "@/types/brands" (or
+// reuse ProductProps) once it carries mostLoved / isPromotion / groupName.
+
+const RAIL_CARD_WIDTH = 132;
+function toItem(product: ProductWithOptions): Item {
+  return {
+    id: product.id,
+    foodicsId: product.foodicsId,
+    foodicsSandBoxId: product.foodicsSandBoxId,
+    name: product.name,
+    price: product.price,
+    img: product.image ?? undefined,
+    desc: product.description ?? "",
+    category: product.category.id ?? undefined,
+    groupName: product.groupName!,
+    quantity: 1,
+    option: product.modifiers ?? [],
+  };
+}
+
+const ProductCard = React.memo(function ProductCard({
+  product,
+  onPress,
+}: {
+  product: Product;
+  onPress: (product: ProductWithOptions) => void;
+}) {
+  const tint = BRAND_TINT[product.groupName!] ?? COLORS.n100;
+
+  return (
+    <View style={{ width: RAIL_CARD_WIDTH }}>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => onPress(product)}
+        accessibilityLabel={`View ${product.name}`}
+        style={{ width: RAIL_CARD_WIDTH }}
+      >
+        {" "}
+        <View
+          style={{
+            width: RAIL_CARD_WIDTH,
+            height: RAIL_CARD_WIDTH,
+            borderRadius: 16,
+            backgroundColor: tint,
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+          }}
+        >
+          {product.image ? (
+            <Image
+              source={{ uri: product.image }}
+              style={{ width: "100%", height: "100%" }}
+              resizeMode="cover"
+            />
+          ) : (
+            <Text style={{ fontSize: 34 }}>
+              {BRAND_EMOJI[product.groupName!] ?? "🍽️"}
+            </Text>
+          )}
+        </View>
+        {/* TODO: wire to quick-add / open the product once a product can be
+            resolved to its group (groupId is null in the products payload). */}
+        <View
+          style={{
+            position: "absolute",
+            right: 8,
+            bottom: 8,
+            width: 34,
+            height: 34,
+            borderRadius: 17,
+            backgroundColor: COLORS.surface,
+            alignItems: "center",
+            justifyContent: "center",
+            shadowColor: "#000",
+            shadowOpacity: 0.12,
+            shadowRadius: 6,
+            shadowOffset: { width: 0, height: 2 },
+            elevation: 3,
+          }}
+        >
+          <Ionicons name="add" size={20} color={COLORS.ink} />
+        </View>
+      </TouchableOpacity>
+
+      <AppText
+        numberOfLines={2}
+        style={{
+          fontSize: 13,
+          fontWeight: "600",
+          color: COLORS.ink,
+          lineHeight: 17,
+          marginTop: 10,
+        }}
+      >
+        {product.name}
+      </AppText>
+      <AppText
+        style={{
+          fontSize: 12.5,
+          fontWeight: "500",
+          color: COLORS.ink,
+          marginTop: 4,
+        }}
+      >
+        {formatNaira(product.price)}
+      </AppText>
+    </View>
+  );
+});
+function ProductRail({
+  title,
+  products,
+  onProductPress,
+}: {
+  title: string;
+  products: ProductWithOptions[];
+  onProductPress: (product: ProductWithOptions) => void;
+}) {
+  // No products, no section: no empty header sitting over nothing.
+  if (products.length === 0) return null;
+
+  return (
+    <View style={{ marginTop: 20 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "baseline",
+          paddingHorizontal: 20,
+          marginBottom: 10,
+        }}
+      >
+        <AppText
+          style={{ fontSize: 14.5, fontWeight: "700", color: COLORS.ink }}
+        >
+          {title}
+        </AppText>
+        {/* TODO: wire "See all" once a full-list screen exists. */}
+        {/* <AppText
+          style={{ fontSize: 11.5, fontWeight: "600", color: COLORS.n600 }}
+        >
+          See all
+        </AppText> */}
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
+      >
+        {products.map((product) => (
+          <ProductCard
+            key={product.id}
+            product={product}
+            onPress={onProductPress}
+          />
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
 
 export default function BrandsScreen() {
   const { data } = useGroups();
+  const { data: productsData } = useProducts();
   const groups: Group[] = data ?? [];
+  const mostLoved = useMemo(
+    () => (productsData ?? []).filter((p) => p.isActive && p.mostLoved),
+    [productsData],
+  );
+
+  const promotions = useMemo(
+    () => (productsData ?? []).filter((p) => p.isActive && p.isPromotion),
+    [productsData],
+  );
+  const { open, sheetProps } = useItemSheet();
+  const handleProductPress = useCallback(
+    (product: ProductWithOptions) => open(toItem(product)),
+    [open],
+  );
+  // console.log(productsData);
 
   return (
     <SafeAreaView
@@ -235,222 +349,18 @@ export default function BrandsScreen() {
         )}
 
         {/* ── Most Loved ───────────────────────────────────────── */}
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "baseline",
-            paddingHorizontal: 20,
-            marginTop: 20,
-            marginBottom: 10,
-          }}
-        >
-          <AppText
-            style={{ fontSize: 14.5, fontWeight: "700", color: COLORS.ink }}
-          >
-            Most Loved
-          </AppText>
-          <AppText
-            style={{ fontSize: 11.5, fontWeight: "600", color: COLORS.n600 }}
-          >
-            See all
-          </AppText>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingHorizontal: 20,
-            gap: 12,
-            paddingBottom: 22,
-          }}
-        >
-          {MOST_LOVED.map((item) => (
-            <View
-              key={item.id}
-              style={{
-                width: 128,
-                backgroundColor: COLORS.surface,
-                borderWidth: 1,
-                borderColor: COLORS.n200,
-                borderRadius: 16,
-                padding: 10,
-              }}
-            >
-              <View
-                style={{
-                  width: "100%",
-                  height: 74,
-                  borderRadius: 12,
-                  backgroundColor: item.tint,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 8,
-                }}
-              >
-                <Text style={{ fontSize: 28 }}>{item.emoji}</Text>
-              </View>
-              <AppText
-                numberOfLines={2}
-                style={{
-                  fontSize: 12,
-                  fontWeight: "600",
-                  color: COLORS.ink,
-                  lineHeight: 15,
-                }}
-              >
-                {item.name}
-              </AppText>
-              <AppText
-                style={{ fontSize: 9.5, color: COLORS.n600, marginTop: 3 }}
-              >
-                {item.brand}
-              </AppText>
-              <AppText
-                style={{
-                  fontSize: 12,
-                  fontWeight: "700",
-                  color: COLORS.ink,
-                  marginTop: 7,
-                }}
-              >
-                {formatNaira(item.price)}
-              </AppText>
-            </View>
-          ))}
-        </ScrollView>
-
-        {/* ── Season Specials ──────────────────────────────────── */}
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "baseline",
-            paddingHorizontal: 20,
-            marginBottom: 10,
-          }}
-        >
-          <AppText
-            style={{ fontSize: 14.5, fontWeight: "700", color: COLORS.ink }}
-          >
-            Season Specials
-          </AppText>
-          <AppText
-            style={{ fontSize: 11.5, fontWeight: "600", color: COLORS.n600 }}
-          >
-            See all
-          </AppText>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingHorizontal: 20,
-            gap: 7,
-            paddingBottom: 12,
-          }}
-        >
-          {OCCASIONS.map((occasion) => (
-            <View
-              key={occasion.label}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 4,
-                paddingHorizontal: 11,
-                paddingVertical: 6,
-                borderRadius: 16,
-                backgroundColor: COLORS.n100,
-              }}
-            >
-              <Text style={{ fontSize: 12 }}>{occasion.emoji}</Text>
-              <AppText
-                style={{
-                  fontSize: 11,
-                  fontWeight: "600",
-                  color: COLORS.n600,
-                }}
-              >
-                {occasion.label}
-              </AppText>
-            </View>
-          ))}
-        </ScrollView>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
-        >
-          {SEASON_SPECIALS.map((item) => (
-            <View
-              key={item.id}
-              style={{
-                width: 128,
-                backgroundColor: COLORS.surface,
-                borderWidth: 1,
-                borderColor: COLORS.n200,
-                borderRadius: 16,
-                padding: 10,
-              }}
-            >
-              <View style={{ position: "relative", marginBottom: 8 }}>
-                <View
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    zIndex: 1,
-                    backgroundColor: "rgba(255,255,255,0.92)",
-                    borderRadius: 8,
-                    paddingHorizontal: 5,
-                    paddingVertical: 2,
-                  }}
-                >
-                  <Text style={{ fontSize: 12 }}>{item.occasion}</Text>
-                </View>
-                <View
-                  style={{
-                    width: "100%",
-                    height: 74,
-                    borderRadius: 12,
-                    backgroundColor: item.tint,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Text style={{ fontSize: 28 }}>{item.emoji}</Text>
-                </View>
-              </View>
-              <AppText
-                numberOfLines={2}
-                style={{
-                  fontSize: 12,
-                  fontWeight: "600",
-                  color: COLORS.ink,
-                  lineHeight: 15,
-                }}
-              >
-                {item.name}
-              </AppText>
-              <AppText
-                style={{ fontSize: 9.5, color: COLORS.n600, marginTop: 3 }}
-              >
-                {item.brand}
-              </AppText>
-              <AppText
-                style={{
-                  fontSize: 12,
-                  fontWeight: "700",
-                  color: COLORS.ink,
-                  marginTop: 7,
-                }}
-              >
-                {formatNaira(item.price)}
-              </AppText>
-            </View>
-          ))}
-        </ScrollView>
+        <ProductRail
+          title="Most Loved"
+          products={mostLoved}
+          onProductPress={handleProductPress}
+        />
+        <ProductRail
+          title="Promotions"
+          products={promotions}
+          onProductPress={handleProductPress}
+        />
       </ScrollView>
+      <ItemDetailSheet {...sheetProps} />
     </SafeAreaView>
   );
 }

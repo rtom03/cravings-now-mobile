@@ -14,13 +14,13 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { useCartStore } from "../../../store/cartStore";
+import { useCartStore } from "../../store/cartStore";
 import { AppText } from "@/components/app-text";
 import { useCreateOrderQuote } from "@/hooks/cravings-now-api/order-mutation";
 import { buildOrderPayload } from "@/lib/buildOrderPayload";
 import { useAddresses } from "@/hooks/cravings-now-api/address-query";
 import Loading from "@/components/ui/loading";
-import { useUserLocation } from "@/hooks/use-user-location";
+import { useUserLocation } from "@/hooks/location-provider";
 
 // ─── CravingsNow design tokens — from the style-guide cover frame ──────────
 // TODO: extract into a shared `@/constants/theme` file — duplicated across
@@ -63,16 +63,16 @@ export default function CartScreen() {
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
   const isEmpty = items.length === 0;
 
-  const { data } = useAddresses();
+  // const { data } = useAddresses();
 
-  const address = data?.[0];
+  // const address = data?.[0];
   const { coords, status, openSettings } = useUserLocation();
 
   if (status === "blocked")
     return (
       <Button title="Enable location in Settings" onPress={openSettings} />
     );
-  if (coords) console.log(coords.lat, coords.lng);
+  // if (coords) console.log(coords.lat, coords.lng);
   // console.log(items);
 
   const location = {
@@ -92,7 +92,6 @@ export default function CartScreen() {
       });
 
       const orderQuote = await createOrderQuote.mutateAsync(payload);
-
       router.push({
         pathname: "/checkout",
         params: {

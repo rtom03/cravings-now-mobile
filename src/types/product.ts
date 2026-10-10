@@ -63,6 +63,13 @@ interface Product {
   meta: Record<string, unknown> | null;
   ingredients: unknown[];
   reactivateAt: string | null;
+  mostLoved?: boolean;
+  isPromotion?: boolean;
 }
 
-export { Product, ProductModifier, ProductOption };
+interface ProductWithOptions extends Product {
+  category: Category;
+  modifiers: ProductModifier[];
+}
+
+export { Product, ProductModifier, ProductOption, ProductWithOptions };

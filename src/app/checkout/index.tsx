@@ -16,13 +16,13 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { useCartStore } from "../../../store/cartStore";
+import { useCartStore } from "../../store/cartStore";
 import AddressModal from "@/components/address-modal";
 import { useAddresses } from "@/hooks/cravings-now-api/address-query";
 import { useCreateOrder } from "@/hooks/cravings-now-api/order-mutation";
 import { getCurrentCoords } from "@/lib/location";
 import { buildOrderPayload } from "@/lib/buildOrderPayload";
-import { useAuthStore } from "../../../store/authStore";
+import { useAuthStore } from "../../store/authStore";
 import * as Crypto from "expo-crypto";
 import Loading from "@/components/ui/loading";
 
@@ -241,7 +241,6 @@ export default function CheckoutScreen() {
 
   if (!isAuthenticated) {
     router.replace("/(auth)/login");
-    return;
   }
 
   return (
@@ -354,24 +353,13 @@ export default function CheckoutScreen() {
                       : decrementQty(item.id)
                   }
                   style={{
-                    width: 20,
+                    width: 30,
                     height: 20,
-                    borderRadius: 6,
-                    borderWidth: 1,
-                    borderColor: COLORS.n200,
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  {item.quantity === 1 ? (
-                    <Ionicons
-                      name="trash-outline"
-                      size={10}
-                      color={COLORS.ink}
-                    />
-                  ) : (
-                    <Ionicons name="remove" size={12} color={COLORS.ink} />
-                  )}
+                  <AppText>Qty</AppText>
                 </TouchableOpacity>
                 <AppText
                   style={{
@@ -382,19 +370,6 @@ export default function CheckoutScreen() {
                 >
                   {item.quantity}
                 </AppText>
-                <TouchableOpacity
-                  onPress={() => incrementQty(item.id)}
-                  style={{
-                    width: 20,
-                    height: 20,
-                    borderRadius: 6,
-                    backgroundColor: COLORS.ink,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Ionicons name="add" size={12} color="#fff" />
-                </TouchableOpacity>
               </View>
             </View>
 

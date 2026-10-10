@@ -1,6 +1,6 @@
 // lib/toCartItem.ts
 import { ProductOption } from "@/app/brand/[id]";
-import { CartItem } from "../../store/cartStore";
+import { CartItem } from "../store/cartStore";
 
 export function toCartItem(
   item: Pick<

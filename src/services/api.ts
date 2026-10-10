@@ -1,15 +1,16 @@
-import { Groups, BrandProducts, Product } from "@/types/brands";
+import { Groups } from "@/types/brands";
 import {
   CreateOrderPayload,
   CreateOrderQuoteResponse,
   CreateOrderResponse,
 } from "@/types/order";
+import { Product, ProductWithOptions } from "@/types/product";
 import * as SecureStore from "expo-secure-store";
 
 // export const BASE_URL = "http://192.168.1.179:8000/api";
-export const BASE_URL = "http://192.168.15.159:8000/api";
+// export const BASE_URL = "http://192.168.15.159:8000/api";
 
-// export const BASE_URL = "http://172.20.10.2:8000/api";
+export const BASE_URL = "http://172.20.10.2:8000/api";
 // export const BASE_URL = "http://192.168.88.48:8000/api";
 
 // types/type.ts (add alongside existing types)
@@ -158,7 +159,9 @@ const getGroups = async (): Promise<Groups[]> => {
 
 ///PRODUCTS
 
-const getProductsByGroupName = async (id: string): Promise<BrandProducts> => {
+const getProductsByGroupName = async (
+  id: string,
+): Promise<ProductWithOptions[]> => {
   try {
     return await apiFetch(`/admin/groups/products/${id}`); // ← await added
   } catch (error: any) {
@@ -166,9 +169,9 @@ const getProductsByGroupName = async (id: string): Promise<BrandProducts> => {
   }
 };
 
-const getProducts = async (): Promise<Product> => {
+const getProducts = async (): Promise<ProductWithOptions[]> => {
   try {
-    return await apiFetch("/products/");
+    return await apiFetch("/products");
   } catch (error: any) {
     throw new Error(error?.message || "Something went wrong");
   }

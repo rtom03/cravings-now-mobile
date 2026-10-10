@@ -28,13 +28,23 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { useCartStore } from "../../../store/cartStore";
+import { useCartStore } from "../../store/cartStore";
 import MenuItemCard from "@/components/menu-item-card";
-import { ProductProps } from "@/types/brands";
 import { useProductsByGroupById } from "@/hooks/cravings-now-api/groupQuery";
 import { fmt } from "@/utils";
 import { toCartItem } from "@/lib/toCartItems";
-import { ProductModifier } from "@/types/product";
+import {
+  ProductModifier,
+  ProductOption,
+  ProductsWithOptionsProps,
+  ProductWithOptions,
+} from "@/types/product";
+import {
+  CategoryTabsSkeleton,
+  MenuSectionsSkeleton,
+  SkeletonProvider,
+} from "@/components/products-skeleton";
+import MenuSearchModal from "@/components/menu-search-modal";
 
 // ─── CravingsNow design tokens — from the style-guide cover frame ──────────
 // TODO: extract into a shared `@/constants/theme` file — duplicated across
@@ -53,17 +63,6 @@ const COLORS = {
 };
 
 // ─── Real API shape (matches the JSON you pasted) ──────────────────────────
-
-export interface ProductOption {
-  id: string;
-  foodicsId: string;
-  sku: string;
-  name: string;
-  image: string | null;
-  isActive: boolean;
-  isInStock: boolean;
-  price: number;
-}
 
 export type SelectedOption = ProductOption & { quantity: number };
 
@@ -95,7 +94,10 @@ interface CategorySection {
 // This used to return an object missing all three, which is the root of
 // the "quantity doesn't work for plain items" bug: a quick-added item's
 // `.quantity` was `undefined`, not 1, because nothing here ever set it.
-function toMenuItem(product: ProductProps, groupName: string): Item {
+export function toMenuItem(
+  product: ProductWithOptions,
+  groupName: string,
+): Item {
   return {
     id: product.id,
     foodicsId: product.foodicsId,
@@ -114,7 +116,7 @@ function toMenuItem(product: ProductProps, groupName: string): Item {
 }
 
 function groupProductsByCategory(
-  products: ProductProps[],
+  products: ProductWithOptions[],
   groupName: string,
 ): CategorySection[] {
   const sectionsByCategory = new Map<string, CategorySection>();
@@ -294,7 +296,7 @@ export default function DetailsScreen() {
     "delivery",
   );
 
-  const { data } = useProductsByGroupById(id);
+  const { data, isPending } = useProductsByGroupById(id);
 
   const sections = useMemo(
     () => groupProductsByCategory(data ?? [], name),
@@ -454,7 +456,20 @@ export default function DetailsScreen() {
     setSelectedItem({ ...item, quantity: 1 });
     setSheetVisible(true);
   }, []);
+  const [searchVisible, setSearchVisible] = useState(false);
 
+  // flat list for the search modal
+  const allItems = useMemo(() => sections.flatMap((s) => s.items), [sections]);
+
+  // A native Modal can't present while another is dismissing, so close search
+  // first, then open the item sheet once the dismissal has finished.
+  const handleSearchItemPress = useCallback(
+    (item: Item) => {
+      setSearchVisible(false);
+      setTimeout(() => handleItemPress(item), 350);
+    },
+    [handleItemPress],
+  );
   // Quick-add path for items with no required modifiers (MenuItemCard
   // decides when this is safe to call directly instead of opening the
   // sheet). item.quantity is reliably 1 here because toMenuItem sets it —
@@ -467,6 +482,41 @@ export default function DetailsScreen() {
     [addToCart],
   );
 
+  const itemSheet = (
+    <ItemDetailSheet
+      deal={selectedItem}
+      visible={sheetVisible}
+      onClose={() => setSheetVisible(false)}
+      onQuantityChange={handleQuantityChange}
+      onAddToCart={(selectedQuantities) => {
+        if (selectedItem) {
+          // Build the list of what was ACTUALLY picked, with how many of
+          // each — not every option that exists. Previously this used
+          // `.flatMap((o) => o.options!)`, which ignored selection
+          // entirely and sent every option from every modifier regardless
+          // of whether the person chose it.
+          const chosenOptions: SelectedOption[] = selectedItem.option.flatMap(
+            (modifier) => {
+              const quantities = selectedQuantities[modifier.id] ?? {};
+              return modifier.options
+                .filter((option) => (quantities[option.id] ?? 0) > 0)
+                .map((option) => ({
+                  ...option,
+                  quantity: quantities[option.id],
+                }));
+            },
+          );
+
+          addToCart(
+            toCartItem(selectedItem, chosenOptions),
+            selectedItem.quantity,
+          );
+        }
+        setSheetVisible(false);
+      }}
+    />
+  );
+
   return (
     <SafeAreaView
       edges={["top", "bottom"]}
@@ -477,148 +527,163 @@ export default function DetailsScreen() {
         brandName={name}
         scrollY={scrollY}
         onHeightChange={handleHeightChange}
+        onSearchPress={isPending ? undefined : () => setSearchVisible(true)}
       />
-
-      <Animated.ScrollView
-        ref={scrollViewRef}
-        onScroll={handleScroll}
-        onMomentumScrollEnd={releaseProgrammaticScrollLock}
-        scrollEventThrottle={16}
-        contentContainerStyle={{
-          paddingBottom:
-            cartItems.length > 0 ? CART_BAR_FOOTPRINT + insets.bottom : 0,
-        }}
-      >
-        <View style={{ width: "100%", height: 200 }}>
-          <Image
-            source={{ uri: hero_img }}
-            style={{ width: "100%", height: "100%" }}
-            resizeMode="cover"
-          />
-          <View
-            style={{
-              position: "absolute",
-              top: 16,
-              left: 16,
-              right: 16,
-              flexDirection: "row",
-              justifyContent: "space-between",
-            }}
-          ></View>
-        </View>
-
-        <View
-          style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4 }}
-        >
-          <AppText
-            style={{ fontSize: 19, fontWeight: "700", color: COLORS.ink }}
-          >
-            {name}
-          </AppText>
-          {!!ratings && (
-            <AppText
-              style={{
-                fontSize: 12,
-                fontWeight: "700",
-                color: COLORS.warn,
-                marginTop: 4,
-              }}
-            >
-              ★ {ratings}
-            </AppText>
-          )}
-        </View>
-
-        <View
-          style={{
-            flexDirection: "row",
-            backgroundColor: COLORS.n100,
-            borderRadius: 12,
-            padding: 4,
-            marginHorizontal: 20,
-            marginTop: 14,
+      <SkeletonProvider active={isPending}>
+        <Animated.ScrollView
+          ref={scrollViewRef}
+          onScroll={handleScroll}
+          onMomentumScrollEnd={releaseProgrammaticScrollLock}
+          scrollEventThrottle={16}
+          contentContainerStyle={{
+            paddingBottom:
+              cartItems.length > 0 ? CART_BAR_FOOTPRINT + insets.bottom : 0,
           }}
         >
-          {(["delivery", "pickup"] as const).map((mode) => {
-            const active = fulfillment === mode;
-            return (
-              <TouchableOpacity
-                key={mode}
-                onPress={() => setFulfillment(mode)}
+          <View style={{ width: "100%", height: 200 }}>
+            <Image
+              source={{ uri: hero_img }}
+              style={{ width: "100%", height: "100%" }}
+              resizeMode="cover"
+            />
+            <View
+              style={{
+                position: "absolute",
+                top: 16,
+                left: 16,
+                right: 16,
+                flexDirection: "row",
+                justifyContent: "space-between",
+              }}
+            ></View>
+          </View>
+
+          <View
+            style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4 }}
+          >
+            <AppText
+              style={{ fontSize: 19, fontWeight: "700", color: COLORS.ink }}
+            >
+              {name}
+            </AppText>
+            {!!ratings && (
+              <AppText
                 style={{
-                  flex: 1,
-                  alignItems: "center",
-                  paddingVertical: 8,
-                  borderRadius: 9,
-                  backgroundColor: active ? COLORS.surface : "transparent",
+                  fontSize: 12,
+                  fontWeight: "700",
+                  color: COLORS.warn,
+                  marginTop: 4,
                 }}
               >
-                <AppText
+                ★ {ratings}
+              </AppText>
+            )}
+          </View>
+
+          <View
+            style={{
+              flexDirection: "row",
+              backgroundColor: COLORS.n100,
+              borderRadius: 12,
+              padding: 4,
+              marginHorizontal: 20,
+              marginTop: 14,
+            }}
+          >
+            {(["delivery", "pickup"] as const).map((mode) => {
+              const active = fulfillment === mode;
+              return (
+                <TouchableOpacity
+                  key={mode}
+                  onPress={() => setFulfillment(mode)}
                   style={{
-                    fontSize: 12.5,
-                    fontWeight: "600",
-                    color: active ? COLORS.ink : COLORS.n600,
+                    flex: 1,
+                    alignItems: "center",
+                    paddingVertical: 8,
+                    borderRadius: 9,
+                    backgroundColor: active ? COLORS.surface : "transparent",
                   }}
                 >
-                  {mode === "delivery" ? "Delivery" : "Pickup"}
-                </AppText>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                  <AppText
+                    style={{
+                      fontSize: 12.5,
+                      fontWeight: "600",
+                      color: active ? COLORS.ink : COLORS.n600,
+                    }}
+                  >
+                    {mode === "delivery" ? "Delivery" : "Pickup"}
+                  </AppText>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
-        {/* TODO: placeholder values — wire to real ETA/fee/distance once
+          {/* TODO: placeholder values — wire to real ETA/fee/distance once
             the group/product API exposes them. */}
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            backgroundColor: COLORS.n100,
-            borderRadius: 14,
-            marginHorizontal: 20,
-            marginTop: 14,
-            paddingVertical: 12,
-            paddingHorizontal: 16,
-          }}
-        >
-          {fulfillment === "delivery" ? (
-            <>
-              <InfoCol value="25–35" label="min" />
-              <InfoCol value="₦500" label="delivery" />
-              <InfoCol value="2.1 km" label="away" />
-            </>
-          ) : (
-            <>
-              <InfoCol value="10–15" label="min" />
-              <InfoCol value="2.1 km" label="away" />
-            </>
-          )}
-        </View>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              backgroundColor: COLORS.n100,
+              borderRadius: 14,
+              marginHorizontal: 20,
+              marginTop: 14,
+              paddingVertical: 12,
+              paddingHorizontal: 16,
+            }}
+          >
+            {fulfillment === "delivery" ? (
+              <>
+                <InfoCol value="25–35" label="min" />
+                <InfoCol value="₦500" label="delivery" />
+                <InfoCol value="2.1 km" label="away" />
+              </>
+            ) : (
+              <>
+                <InfoCol value="10–15" label="min" />
+                <InfoCol value="2.1 km" label="away" />
+              </>
+            )}
+          </View>
 
-        <View
-          onLayout={handleTabBarLayout}
-          style={{
-            marginTop: 6,
-            backgroundColor: COLORS.paper,
-            borderBottomWidth: 1,
-            borderBottomColor: COLORS.n200,
-          }}
-        >
-          <CategoryTabs
-            sections={sections}
-            activeCategoryId={activeCategoryId}
-            onSelect={scrollToCategory}
-          />
-        </View>
+          <View
+            onLayout={handleTabBarLayout}
+            style={{
+              marginTop: 6,
+              backgroundColor: COLORS.paper,
+              borderBottomWidth: 1,
+              borderBottomColor: COLORS.n200,
+            }}
+          >
+            {isPending ? (
+              <CategoryTabsSkeleton />
+            ) : (
+              <CategoryTabs
+                sections={sections}
+                activeCategoryId={activeCategoryId}
+                onSelect={scrollToCategory}
+              />
+            )}
+          </View>
 
-        <MenuSections
+          {/* <MenuSections
           sections={sections}
           onSectionLayout={handleSectionLayout}
           onItemPress={handleItemPress}
           onAdd={handleAddItem}
-        />
-      </Animated.ScrollView>
-
+        /> */}
+          {isPending ? (
+            <MenuSectionsSkeleton />
+          ) : (
+            <MenuSections
+              sections={sections}
+              onSectionLayout={handleSectionLayout}
+              onItemPress={handleItemPress}
+              onAdd={handleAddItem}
+            />
+          )}
+        </Animated.ScrollView>
+      </SkeletonProvider>
       <Animated.View
         pointerEvents={scrolledPastTabBar ? "box-none" : "none"}
         style={{
@@ -640,38 +705,19 @@ export default function DetailsScreen() {
         />
       </Animated.View>
 
-      <ItemDetailSheet
-        deal={selectedItem}
-        visible={sheetVisible}
-        onClose={() => setSheetVisible(false)}
-        onQuantityChange={handleQuantityChange}
-        onAddToCart={(selectedQuantities) => {
-          if (selectedItem) {
-            // Build the list of what was ACTUALLY picked, with how many of
-            // each — not every option that exists. Previously this used
-            // `.flatMap((o) => o.options!)`, which ignored selection
-            // entirely and sent every option from every modifier regardless
-            // of whether the person chose it.
-            const chosenOptions: SelectedOption[] = selectedItem.option.flatMap(
-              (modifier) => {
-                const quantities = selectedQuantities[modifier.id] ?? {};
-                return modifier.options
-                  .filter((option) => (quantities[option.id] ?? 0) > 0)
-                  .map((option) => ({
-                    ...option,
-                    quantity: quantities[option.id],
-                  }));
-              },
-            );
+      {!searchVisible && itemSheet}
 
-            addToCart(
-              toCartItem(selectedItem, chosenOptions),
-              selectedItem.quantity,
-            );
-          }
-          setSheetVisible(false);
-        }}
-      />
+      <MenuSearchModal
+        visible={searchVisible}
+        brandName={name}
+        items={allItems}
+        onClose={() => setSearchVisible(false)}
+        onItemPress={handleItemPress}
+        onAdd={handleAddItem}
+      >
+        {/* Search path: same sheet, nested so it opens over search */}
+        {itemSheet}
+      </MenuSearchModal>
 
       {cartItems.length > 0 && (
         <Link href={"/cart" as Href} asChild>

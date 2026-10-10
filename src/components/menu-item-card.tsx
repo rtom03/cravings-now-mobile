@@ -1,7 +1,7 @@
 import { Item } from "@/app/brand/[id]";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useCartStore } from "../../store/cartStore";
+import { useCartStore } from "../store/cartStore";
 import { AppText } from "./app-text";
 
 // ─── CravingsNow design tokens — from the style-guide cover frame ──────────

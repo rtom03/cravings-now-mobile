@@ -33,27 +33,9 @@ interface Branch {
   // products: ProductBranch;
 }
 
-type Category = {
-  id: string;
-  foodicsId: string;
-  name: string;
-  nameLocalized: string | null;
-  reference: string | null;
-  image: string | null;
-};
-
 // ─── Raw API response type (snake_case, as Foodics sends it) ──────────────────
 
 // ─── Internal camelCase type ────────────────────────────────────────────────
-
-interface ProductProps extends Product {
-  category: Category;
-  modifiers: ProductModifier[];
-}
-
-interface BrandProducts {
-  products: ProductProps[];
-}
 
 interface Groups {
   id: string;
@@ -64,4 +46,4 @@ interface Groups {
   logo: string | null;
 }
 
-export { Branch, Product, Groups, BrandProducts, ProductProps, Category };
+export { Branch, Groups };

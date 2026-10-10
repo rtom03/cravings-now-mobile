@@ -14,10 +14,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "@/components/app-text";
 import AddressModal from "@/components/address-modal";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuthStore } from "../../../store/authStore";
+import { useAuthStore } from "../../store/authStore";
 import { useGroups } from "@/hooks/cravings-now-api/groupQuery";
 import { fomarlizeName, getGreeting } from "@/utils";
-import { useUserLocation } from "@/hooks/use-user-location";
+import { useUserLocation } from "@/hooks/location-provider";
 
 // ─── CravingsNow design tokens — from the style-guide cover frame ──────────
 // TODO: move into `@/constants` once the rest of the app migrates off the
@@ -67,17 +67,19 @@ interface Group {
 export default function HomeScreen() {
   const { data } = useGroups();
   const groups: Group[] = data ?? [];
-  const [addressModalVisible, setAddressModalVisible] = useState(false);
+  // const [addressModalVisible, setAddressModalVisible] = useState(false);
   const user = useAuthStore((s) => s.user); // re-renders on change
   // console.log(user?.name);
   const greeting = getGreeting();
-  const { coords, status, place, openSettings } = useUserLocation();
+  const { status, place, openSettings } = useUserLocation();
 
   if (status === "blocked")
     return (
       <Button title="Enable location in Settings" onPress={openSettings} />
     );
-  if (coords) console.log(coords.lat, coords.lng);
+  // if (coords) console.log(coords.lat, coords.lng);
+
+  // console.log(place?.name);
 
   return (
     <SafeAreaView
@@ -98,7 +100,7 @@ export default function HomeScreen() {
             {`${greeting} ${fomarlizeName(user?.name)}`}
           </AppText>
           <TouchableOpacity
-            onPress={() => setAddressModalVisible(true)}
+            // onPress={() => setAddressModalVisible(true)}
             style={{
               flexDirection: "row",
               alignItems: "center",
@@ -333,11 +335,11 @@ export default function HomeScreen() {
           ))
         )}
       </ScrollView>
-
+      {/* 
       <AddressModal
         visible={addressModalVisible}
         onClose={() => setAddressModalVisible(false)}
-      />
+      /> */}
     </SafeAreaView>
   );
 }

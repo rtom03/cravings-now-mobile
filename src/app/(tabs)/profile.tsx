@@ -5,7 +5,7 @@ import { Href, useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView, StatusBar, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAuthStore } from "../../../store/authStore";
+import { useAuthStore } from "../../store/authStore";
 import { logout } from "@/lib/api/auth";
 import ConfirmationModal from "@/components/shared/confirmation-modal";
 import { fomarlizeName, getInitials } from "@/utils";
@@ -109,7 +109,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user); // re-renders on change
 
-  console.log(user);
+  // console.log(user);
 
   const [addressModalVisible, setAddressModalVisible] =
     useState<boolean>(false);

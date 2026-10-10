@@ -19,7 +19,7 @@ export const useProductsByGroupById = (id: string, enabled = true) => {
     queryFn: async () => {
       const res = await getProductsByGroupName(id);
       // console.log(res);
-      return res.products; // unwrap the { branches: [...] } envelope
+      return res; // unwrap the { branches: [...] } envelope
     },
     enabled, // query won't fire until this is true
   });

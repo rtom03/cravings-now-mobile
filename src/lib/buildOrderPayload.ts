@@ -1,5 +1,6 @@
 // lib/buildOrderPayload.ts
-import { CartItem, CreateOrderPayload } from "@/types/order";
+import { CreateOrderPayload } from "@/types/order";
+import { CartItem } from "../store/cartStore";
 
 export function buildOrderPayload(args: {
   items: CartItem[];
@@ -24,16 +25,13 @@ export function buildOrderPayload(args: {
       quantity: i.quantity,
       foodicsId: i.foodicsId,
       foodicsSandBoxId: i.foodicsSandBoxId,
-
       groupName: i.groupName, // NEW — which brand this line belongs to, drives the split
-      options: i.modifiers?.flatMap((o) =>
-        o.options.map((opt) => ({
-          modifierOptionId: opt.id,
-          quantity: opt.quantity,
-          foodicsId: opt.foodicsId,
-          foodicsSandBoxId: opt.foodicsSandBoxId,
-        })),
-      ),
+      options: i.options.map((opt) => ({
+        modifierOptionId: opt.id,
+        quantity: opt.quantity,
+        foodicsId: opt.foodicsId,
+        foodicsSandBoxId: opt.foodicsSandBoxId,
+      })),
     })),
     // charges: args?.chargeIds.map((chargeId) => ({ chargeId })),
     // payment: { paymentMethodId: args.paymentMethodId, amount: args.amount },

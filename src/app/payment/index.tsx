@@ -3,7 +3,7 @@ import { ActivityIndicator, View } from "react-native";
 import { WebView } from "react-native-webview";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCartStore } from "../../../store/cartStore";
+import { useCartStore } from "../../store/cartStore";
 
 const CALLBACK_PREFIX =
   "https://seventy-sulfur-chute.ngrok-free.dev/payment/callback"; // must match callback_url sent to Paystack

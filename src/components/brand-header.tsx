@@ -20,12 +20,15 @@ interface BrandHeaderProps {
    * category tab bar overlay) is always correct regardless of device
    * notch/status-bar size. */
   onHeightChange?: (height: number) => void;
+  /** Fires when the search icon is tapped. */
+  onSearchPress?: () => void;
 }
 
 const BrandHeader = ({
   brandName,
   scrollY,
   onHeightChange,
+  onSearchPress,
 }: BrandHeaderProps) => {
   const insets = useSafeAreaInsets();
 
@@ -78,19 +81,7 @@ const BrandHeader = ({
       >
         <Ionicons name="chevron-back" size={22} color="#1a1a1a" />
       </TouchableOpacity>
-      {/* <Animated.View
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 14,
-          alignItems: "center",
-          justifyContent: "center",
-          opacity: clipLineOpacity,
-        }}
-      >
-        <AppText>{brandName}</AppText>
-      </Animated.View> */}
+
       <Animated.View
         pointerEvents="none"
         style={{
@@ -116,9 +107,15 @@ const BrandHeader = ({
           gap: 8,
         }}
       >
-        {(["search", "heart-outline"] as const).map((icon) => (
+        {(
+          [
+            { icon: "search", onPress: onSearchPress },
+            { icon: "heart-outline", onPress: undefined }, // TODO: favourites
+          ] as const
+        ).map(({ icon, onPress }) => (
           <TouchableOpacity
             key={icon}
+            onPress={onPress}
             style={{
               backgroundColor: "#f2f2f2",
               borderRadius: 20,
