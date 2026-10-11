@@ -21,6 +21,7 @@ import {
   LayoutChangeEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  ScrollView,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -36,7 +37,6 @@ import { toCartItem } from "@/lib/toCartItems";
 import {
   ProductModifier,
   ProductOption,
-  ProductsWithOptionsProps,
   ProductWithOptions,
 } from "@/types/product";
 import {
@@ -45,6 +45,7 @@ import {
   SkeletonProvider,
 } from "@/components/products-skeleton";
 import MenuSearchModal from "@/components/menu-search-modal";
+import CartBar from "@/components/cart-bar";
 
 // ─── CravingsNow design tokens — from the style-guide cover frame ──────────
 // TODO: extract into a shared `@/constants/theme` file — duplicated across
@@ -162,7 +163,7 @@ const CategoryTabs = React.memo(function CategoryTabs({
   activeCategoryId: string | null;
   onSelect: (categoryId: string) => void;
 }) {
-  const scrollRef = useRef<Animated.ScrollView>(null);
+  const scrollRef = useRef<ScrollView>(null);
   const tabOffsets = useRef<Record<string, number>>({});
 
   useEffect(() => {
@@ -304,7 +305,7 @@ export default function DetailsScreen() {
   );
 
   // ─── Scrollspy state ────────────────────────────────────────────────────
-  const scrollViewRef = useRef<Animated.ScrollView>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
   const sectionOffsets = useRef<Record<string, number>>({});
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [tabBarNaturalOffset, setTabBarNaturalOffset] = useState<number | null>(
@@ -463,13 +464,7 @@ export default function DetailsScreen() {
 
   // A native Modal can't present while another is dismissing, so close search
   // first, then open the item sheet once the dismissal has finished.
-  const handleSearchItemPress = useCallback(
-    (item: Item) => {
-      setSearchVisible(false);
-      setTimeout(() => handleItemPress(item), 350);
-    },
-    [handleItemPress],
-  );
+
   // Quick-add path for items with no required modifiers (MenuItemCard
   // decides when this is safe to call directly instead of opening the
   // sheet). item.quantity is reliably 1 here because toMenuItem sets it —
@@ -665,13 +660,6 @@ export default function DetailsScreen() {
               />
             )}
           </View>
-
-          {/* <MenuSections
-          sections={sections}
-          onSectionLayout={handleSectionLayout}
-          onItemPress={handleItemPress}
-          onAdd={handleAddItem}
-        /> */}
           {isPending ? (
             <MenuSectionsSkeleton />
           ) : (
@@ -719,42 +707,7 @@ export default function DetailsScreen() {
         {itemSheet}
       </MenuSearchModal>
 
-      {cartItems.length > 0 && (
-        <Link href={"/cart" as Href} asChild>
-          <TouchableOpacity
-            style={{
-              position: "absolute",
-              left: 16,
-              right: 16,
-              bottom: 16 + insets.bottom,
-              backgroundColor: COLORS.support,
-              borderRadius: 16,
-              paddingVertical: 14,
-              paddingHorizontal: 18,
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              shadowColor: COLORS.support,
-              shadowOpacity: 0.35,
-              shadowRadius: 12,
-              shadowOffset: { width: 0, height: 6 },
-              elevation: 6,
-            }}
-          >
-            <AppText
-              style={{ color: "#fff", fontSize: 12.5, fontWeight: "600" }}
-            >
-              {cartItems.length} {cartItems.length === 1 ? "item" : "items"} ·{" "}
-              {fmt(totalPrice())}
-            </AppText>
-            <AppText
-              style={{ color: "#fff", fontSize: 12.5, fontWeight: "700" }}
-            >
-              View cart →
-            </AppText>
-          </TouchableOpacity>
-        </Link>
-      )}
+      <CartBar />
     </SafeAreaView>
   );
 }

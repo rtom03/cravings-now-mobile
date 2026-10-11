@@ -6,7 +6,6 @@ import {
   Image,
   ScrollView,
   StatusBar,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -18,6 +17,7 @@ import { Product, ProductWithOptions } from "@/types/product";
 import { useItemSheet } from "@/hooks/use-item-sheet";
 import { Item, toMenuItem } from "../brand/[id]";
 import ItemDetailSheet from "@/components/product-details";
+import CartBar from "@/components/cart-bar";
 
 // ─── CravingsNow design tokens ──────────────────────────────────────────────
 // TODO: extract into a shared `@/constants/theme` file — duplicated here and
@@ -85,7 +85,7 @@ const ProductCard = React.memo(function ProductCard({
   product,
   onPress,
 }: {
-  product: Product;
+  product: ProductWithOptions;
   onPress: (product: ProductWithOptions) => void;
 }) {
   const tint = BRAND_TINT[product.groupName!] ?? COLORS.n100;
@@ -98,7 +98,6 @@ const ProductCard = React.memo(function ProductCard({
         accessibilityLabel={`View ${product.name}`}
         style={{ width: RAIL_CARD_WIDTH }}
       >
-        {" "}
         <View
           style={{
             width: RAIL_CARD_WIDTH,
@@ -117,9 +116,9 @@ const ProductCard = React.memo(function ProductCard({
               resizeMode="cover"
             />
           ) : (
-            <Text style={{ fontSize: 34 }}>
+            <AppText style={{ fontSize: 34 }}>
               {BRAND_EMOJI[product.groupName!] ?? "🍽️"}
-            </Text>
+            </AppText>
           )}
         </View>
         {/* TODO: wire to quick-add / open the product once a product can be
@@ -317,9 +316,9 @@ export default function BrandsScreen() {
                       resizeMode="contain"
                     />
                   ) : (
-                    <Text style={{ fontSize: 22 }}>
+                    <AppText style={{ fontSize: 22 }}>
                       {BRAND_EMOJI[group.name] ?? "🍽️"}
-                    </Text>
+                    </AppText>
                   )}
                 </View>
                 <View style={{ flex: 1 }}>
@@ -361,6 +360,7 @@ export default function BrandsScreen() {
         />
       </ScrollView>
       <ItemDetailSheet {...sheetProps} />
+      <CartBar />
     </SafeAreaView>
   );
 }
