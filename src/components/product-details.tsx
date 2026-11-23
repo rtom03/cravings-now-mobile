@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import SafeModal from "./shared/safe-modal";
-import { Item, ProductOption } from "@/app/brand/[id]";
+import { Item } from "@/app/brand/[id]";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   Image,
@@ -14,7 +14,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { ProductModifier } from "@/types/product";
+import { ProductModifier, ProductOption } from "@/types/product";
 
 // ─── CravingsNow design tokens — from the style-guide cover frame ──────────
 // TODO: extract into a shared `@/constants/theme` file — duplicated across

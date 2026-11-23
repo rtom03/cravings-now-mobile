@@ -1,27 +1,30 @@
+import { toQuery } from "@/lib/order.hp";
 import { Groups } from "@/types/brands";
 import {
   CreateOrderPayload,
   CreateOrderQuoteResponse,
   CreateOrderResponse,
+  ListOrdersParams,
+  ListOrdersResponse,
 } from "@/types/order";
-import { Product, ProductWithOptions } from "@/types/product";
+import { ProductWithOptions } from "@/types/product";
 import * as SecureStore from "expo-secure-store";
 
-// export const BASE_URL = "http://192.168.1.179:8000/api";
-// export const BASE_URL = "http://192.168.15.159:8000/api";
+export const BASE_URL = "http://192.168.1.179:8000/api";
+// export const BASE_URL = "http://192.168.15.248:8000/api";
 
-export const BASE_URL = "http://172.20.10.2:8000/api";
+// export const BASE_URL = "http://172.20.10.13:8000/api";
 // export const BASE_URL = "http://192.168.88.48:8000/api";
 
 // types/type.ts (add alongside existing types)
-type AddressType = "HOME" | "WORK" | "OFFICE" | "OTHER";
 
 type CreateAddressInput = {
   name?: string;
   description?: string;
-  type: AddressType;
   latitude: number;
   longitude: number;
+  floorNumber?: string;
+  doorNumber?: string;
 };
 
 type CreateAddressResponse = {
@@ -29,9 +32,10 @@ type CreateAddressResponse = {
     id: string;
     name: string | null;
     description: string | null;
-    type: AddressType;
     latitude: string;
     longitude: string;
+    floorNumber?: string;
+    doorNumber?: string;
   };
 };
 
@@ -41,7 +45,8 @@ type Address = {
   id: string;
   name: string | null;
   description: string | null;
-  type: AddressType;
+  floorNumber?: string;
+  doorNumber?: string;
   latitude: string;
   longitude: string;
 };
@@ -225,6 +230,12 @@ const createOrderQuote = (
     method: "POST",
     body: JSON.stringify(payload),
   });
+};
+
+export const listOrders = async (
+  params: ListOrdersParams = {},
+): Promise<ListOrdersResponse> => {
+  return apiFetch(`/orders${toQuery(params)}`);
 };
 
 export {

@@ -4,7 +4,6 @@ import { CartItem } from "../store/cartStore";
 
 export function buildOrderPayload(args: {
   items: CartItem[];
-
   location: { latitude: number; longitude: number };
   customerId?: string;
   customerAddressId?: string;
@@ -15,7 +14,7 @@ export function buildOrderPayload(args: {
   amount?: number;
 }): CreateOrderPayload {
   return {
-    customerId: args.customerId,
+    customerId: args.customerId!,
     customerAddressId: args.customerAddressId,
     idempotencyKey: args.idempotencyKey!,
     customerEmail: args.customerEmail!,

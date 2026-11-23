@@ -21,6 +21,7 @@ import { buildOrderPayload } from "@/lib/buildOrderPayload";
 import { useAddresses } from "@/hooks/cravings-now-api/address-query";
 import Loading from "@/components/ui/loading";
 import { useUserLocation } from "@/hooks/location-provider";
+import { useAuthStore } from "@/store/authStore";
 
 // ─── CravingsNow design tokens — from the style-guide cover frame ──────────
 // TODO: extract into a shared `@/constants/theme` file — duplicated across
@@ -66,6 +67,9 @@ export default function CartScreen() {
   // const { data } = useAddresses();
 
   // const address = data?.[0];
+  const user = useAuthStore((s) => s.user); // re-renders on change
+  // console.log(user);
+
   const { coords, status, openSettings } = useUserLocation();
 
   if (status === "blocked")
@@ -85,6 +89,7 @@ export default function CartScreen() {
 
   const onProceedToCheckout = async () => {
     if (createOrderQuote.isPending) return;
+    if (!user?.name) return router.replace("/(auth)/login");
     try {
       const payload = buildOrderPayload({
         items,
@@ -390,7 +395,7 @@ export default function CartScreen() {
               paddingHorizontal: 20,
               flexDirection: "row",
               alignItems: "center",
-              justifyContent: "space-between",
+              justifyContent: "center",
               shadowColor: COLORS.signal,
               shadowOpacity: 0.35,
               shadowRadius: 12,
@@ -401,16 +406,17 @@ export default function CartScreen() {
             {createOrderQuote.isPending ? (
               <Loading />
             ) : (
-              <View>
-                <AppText
-                  style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}
-                >
-                  {formatPrice(totalPrice())}
-                </AppText>
+              <View
+                style={{
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
                 <AppText
                   style={{ color: "#fff", fontSize: 13.5, fontWeight: "700" }}
                 >
-                  Proceed to checkout →
+                  Proceed to checkout
                 </AppText>
               </View>
             )}

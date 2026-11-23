@@ -283,7 +283,7 @@ export default function DetailsScreen() {
     ratings: string;
     desc: string;
   }>();
-
+  // console.log(id);
   const [sheetVisible, setSheetVisible] = useState(false);
   // One quantity field, not two. selectedItem IS an Item, and Item already
   // owns `quantity` — there's no second `qty` sitting next to it that
@@ -298,7 +298,7 @@ export default function DetailsScreen() {
   );
 
   const { data, isPending } = useProductsByGroupById(id);
-
+  // console.log(data);
   const sections = useMemo(
     () => groupProductsByCategory(data ?? [], name),
     [data, name],

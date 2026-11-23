@@ -1,5 +1,4 @@
 import { Link } from "expo-router";
-import { useState } from "react";
 import {
   ActivityIndicator,
   Button,
@@ -12,12 +11,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "@/components/app-text";
-import AddressModal from "@/components/address-modal";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "../../store/authStore";
 import { useGroups } from "@/hooks/cravings-now-api/groupQuery";
 import { fomarlizeName, getGreeting } from "@/utils";
 import { useUserLocation } from "@/hooks/location-provider";
+import AddressModal from "@/components/address-modal";
+import { useState } from "react";
 
 // ─── CravingsNow design tokens — from the style-guide cover frame ──────────
 // TODO: move into `@/constants` once the rest of the app migrates off the
@@ -73,6 +73,9 @@ export default function HomeScreen() {
   const greeting = getGreeting();
   const { status, place, openSettings } = useUserLocation();
 
+  const [addressModalVisible, setAddressModalVisible] =
+    useState<boolean>(false);
+
   if (status === "blocked")
     return (
       <Button title="Enable location in Settings" onPress={openSettings} />
@@ -100,7 +103,7 @@ export default function HomeScreen() {
             {`${greeting} ${fomarlizeName(user?.name)}`}
           </AppText>
           <TouchableOpacity
-            // onPress={() => setAddressModalVisible(true)}
+            onPress={() => setAddressModalVisible(true)}
             style={{
               flexDirection: "row",
               alignItems: "center",
@@ -335,11 +338,11 @@ export default function HomeScreen() {
           ))
         )}
       </ScrollView>
-      {/* 
+
       <AddressModal
         visible={addressModalVisible}
         onClose={() => setAddressModalVisible(false)}
-      /> */}
+      />
     </SafeAreaView>
   );
 }

@@ -1,21 +1,25 @@
-import { AppText } from "@/components/app-text";
-import { env } from "@/config/env";
-import { useUserLocation } from "@/hooks/use-user-location";
+import { useCreateAddress } from "@/hooks/cravings-now-api/address-mutation";
+import { usePlaceSearch, PickedPlace } from "@/hooks/use-place-search";
 import { Ionicons } from "@expo/vector-icons";
-import { Href, useLocalSearchParams, useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
   StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
-// ─── CravingsNow design tokens ──────────────────────────────────────────────
 // TODO: extract into a shared `@/constants/theme` file.
 const COLORS = {
   ink: "#1B1B1F",
@@ -24,128 +28,117 @@ const COLORS = {
   n600: "#6E6E76",
   n200: "#E7E4DE",
   n100: "#F1EFEA",
+  brand: "#E63462",
 } as const;
 
-// TODO: move into app config — the EXPO_PUBLIC_ prefix is required for Expo
-// to expose an env var to the client bundle at all. Google's Places
-// Autocomplete now requires a funded billing account with no meaningful
-// free tier (the $200/mo credit was discontinued Feb 2025, and legacy
-// Autocomplete was deprecated for new projects in March 2025) — switched
-// to LocationIQ instead: 5,000 requests/day free, no credit card. This key
-// is still visible in the client bundle either way — restrict it by
-// package name / bundle ID in the LocationIQ dashboard.
-const LOCATIONIQ_API_KEY = env.location.location_iq;
+type AddressType = "house" | "apartment" | "office" | "other";
 
-// LocationIQ's autocomplete response already includes lat/lon per result —
-// unlike Google's two-call Autocomplete + Place Details flow, there's
-// nothing further to fetch once a result is tapped.
-interface Prediction {
-  place_id: string;
-  display_name: string;
-  lat: string;
-  lon: string;
+const TYPES: {
+  key: AddressType;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { key: "house", label: "House", icon: "home-outline" },
+  { key: "apartment", label: "Apartment", icon: "business-outline" },
+  { key: "office", label: "Office", icon: "briefcase-outline" },
+  { key: "other", label: "Other", icon: "location-outline" },
+];
+
+export type SavedAddress = PickedPlace & {
+  type: AddressType;
+  buildingName: string;
+  floor: string;
+  doorNumber: string;
+  notes: string;
+};
+
+const EMPTY_FORM = { buildingName: "", floor: "", doorNumber: "", notes: "" };
+
+function Field({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  multiline,
+  keyboardType,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (v: string) => void;
+  placeholder?: string;
+  multiline?: boolean;
+  keyboardType?: "default" | "number-pad";
+}) {
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={{ fontSize: 12, color: COLORS.n600 }}>{label}</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={COLORS.n600}
+        multiline={multiline}
+        keyboardType={keyboardType}
+        style={{
+          backgroundColor: COLORS.paper,
+          borderWidth: 1,
+          borderColor: COLORS.n200,
+          borderRadius: 12,
+          paddingHorizontal: 14,
+          paddingVertical: 11,
+          fontSize: 13,
+          color: COLORS.ink,
+          minHeight: multiline ? 80 : undefined,
+          textAlignVertical: multiline ? "top" : "center",
+        }}
+      />
+    </View>
+  );
 }
 
 export default function AddressSearchScreen() {
   const router = useRouter();
-  const { lat, lng } = useLocalSearchParams<{ lat?: string; lng?: string }>();
 
-  const { coords, status, place, openSettings } = useUserLocation();
+  const [q, setQ] = useState("");
+  const { results, loading } = usePlaceSearch(q);
 
-  const [query, setQuery] = useState("");
-  const [predictions, setPredictions] = useState<Prediction[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // A stable per-visit session token keeps Google's autocomplete + details
-  // calls billed together as one session instead of as separate requests.
-  const sessionTokenRef = useRef<string>(Math.random().toString(36).slice(2));
-  const viewbox = [
-    3.25, // west longitude
-    6.75, // north latitude
-    3.5, // east longitude
-    6.45, // south latitude
-  ].join(",");
-  const fetchPredictions = async (text: string) => {
-    setIsSearching(true);
-    try {
-      const params = new URLSearchParams({
-        input: text,
-        key: LOCATIONIQ_API_KEY,
-        sessiontoken: sessionTokenRef.current,
-      });
-      if (lat && lng) {
-        params.set("location", `${lat},${lng}`);
-        params.set("radius", "20000");
-      }
-      const response = await fetch(
-        `https://us1.locationiq.com/v1/search?` +
-          `key=${LOCATIONIQ_API_KEY}` +
-          `&q=${encodeURIComponent(isSearching)}` +
-          `&format=json` +
-          `&countrycodes=ng` +
-          `&viewbox=${viewbox}` +
-          `&addressdetails=1` +
-          `&normalizeaddress=1` +
-          `&limit=10`,
-      );
-      const json = await response.json();
+  const [place, setPlace] = useState<PickedPlace | null>(null);
+  const [type, setType] = useState<AddressType | null>(null);
+  const [form, setForm] = useState(EMPTY_FORM);
 
-      setPredictions(json ?? []);
-    } catch (error) {
-      console.error("Address search failed:", error);
-      setPredictions([]);
-    } finally {
-      setIsSearching(false);
-    }
+  const set = (k: keyof typeof EMPTY_FORM) => (v: string) =>
+    setForm((f) => ({ ...f, [k]: v }));
+
+  const openSheet = (p: PickedPlace) => {
+    Keyboard.dismiss();
+    setPlace(p);
   };
 
-  const handleChangeQuery = (text: string) => {
-    setQuery(text);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    if (text.trim().length < 3) {
-      setPredictions([]);
-      return;
-    }
-
-    debounceRef.current = setTimeout(() => fetchPredictions(text), 350);
+  const closeSheet = () => {
+    setPlace(null);
+    setType(null);
+    setForm(EMPTY_FORM);
   };
 
-  const handleSelect = async (prediction: Prediction) => {
-    try {
-      const params = new URLSearchParams({
-        place_id: prediction.place_id,
-        key: LOCATIONIQ_API_KEY,
-        sessiontoken: sessionTokenRef.current,
-        fields: "geometry,formatted_address",
-      });
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/details/json?${params.toString()}`,
-      );
-      const json = await response.json();
-      const location = json.result?.geometry?.location;
-      const formattedAddress: string =
-        json.result?.formatted_address ?? prediction.display_name;
+  const canSave = form.buildingName.trim().length > 0;
 
-      if (!location) return;
+  const createAddress = useCreateAddress();
 
-      router.push({
-        pathname: "/address/details",
-        params: {
-          description: formattedAddress,
-          lat: String(location.lat),
-          lng: String(location.lng),
-        },
-      });
-    } catch (error) {
-      console.error("Fetching place details failed:", error);
-    }
+  const handleSave = () => {
+    if (!place || !type || !canSave) return;
+    const address: SavedAddress = { ...place, type, ...form };
+    // TODO: persist (API / store) then navigate back
+    console.log(address);
+    // createAddress.mutate(address);
+    closeSheet();
+    // router.back();
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.paper }}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.paper} />
 
+      {/* Header + search */}
       <View
         style={{
           flexDirection: "row",
@@ -185,57 +178,270 @@ export default function AddressSearchScreen() {
         >
           <Ionicons name="search-outline" size={16} color={COLORS.n600} />
           <TextInput
-            value={query}
-            onChangeText={handleChangeQuery}
+            value={q}
+            onChangeText={setQ}
             placeholder="Search for your address"
             placeholderTextColor={COLORS.n600}
             autoFocus
             style={{ flex: 1, fontSize: 13, color: COLORS.ink, padding: 0 }}
           />
-          {isSearching && (
-            <ActivityIndicator size="small" color={COLORS.n600} />
-          )}
+          {loading && <ActivityIndicator size="small" color={COLORS.n600} />}
         </View>
       </View>
 
+      {/* Results */}
       <FlatList
-        data={predictions}
-        keyExtractor={(item) => item.place_id}
+        data={results}
+        keyExtractor={(r) => r.id}
         keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingHorizontal: 20 }}
+        ListEmptyComponent={
+          q.trim().length >= 3 && !loading ? (
+            <Text
+              style={{
+                textAlign: "center",
+                marginTop: 32,
+                fontSize: 13,
+                color: COLORS.n600,
+              }}
+            >
+              No results. Try a nearby landmark or area.
+            </Text>
+          ) : null
+        }
         renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() => handleSelect(item)}
-            style={{
+          <Pressable
+            onPress={() => openSheet(item)}
+            style={({ pressed }) => ({
               flexDirection: "row",
               alignItems: "center",
               gap: 12,
-              paddingHorizontal: 20,
               paddingVertical: 14,
               borderBottomWidth: 1,
-              borderBottomColor: COLORS.n100,
-            }}
+              borderBottomColor: COLORS.n200,
+              opacity: pressed ? 0.6 : 1,
+            })}
           >
-            <Ionicons name="location-outline" size={18} color="black" />
-            <Text style={{ flex: 1, fontSize: 13, color: "black" }}>
-              {place?.name}
-            </Text>
-          </TouchableOpacity>
+            <Ionicons name="location-outline" size={18} color={COLORS.n600} />
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{ fontSize: 14, fontWeight: "600", color: COLORS.ink }}
+                numberOfLines={1}
+              >
+                {item.name}
+              </Text>
+              <Text
+                style={{ fontSize: 12, color: COLORS.n600, marginTop: 2 }}
+                numberOfLines={1}
+              >
+                {item.address}
+              </Text>
+            </View>
+          </Pressable>
         )}
-        ListEmptyComponent={
-          query.trim().length >= 3 && !isSearching ? (
-            <AppText
-              style={{
-                fontSize: 12,
-                color: COLORS.n600,
-                textAlign: "center",
-                marginTop: 24,
-              }}
-            >
-              No matches found.
-            </AppText>
-          ) : null
-        }
       />
+
+      {/* Bottom sheet */}
+
+      {/* Full-page details */}
+      <Modal
+        visible={!!place}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => (type ? setType(null) : closeSheet())}
+        statusBarTranslucent
+      >
+        <SafeAreaProvider>
+          <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.paper }}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              style={{ flex: 1 }}
+            >
+              {/* Header */}
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 12,
+                  paddingHorizontal: 20,
+                  paddingTop: 8,
+                  paddingBottom: 14,
+                }}
+              >
+                <TouchableOpacity
+                  onPress={() => (type ? setType(null) : closeSheet())}
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 17,
+                    backgroundColor: COLORS.n100,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons
+                    name={type ? "chevron-back" : "close"}
+                    size={16}
+                    color={COLORS.ink}
+                  />
+                </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      fontWeight: "700",
+                      color: COLORS.ink,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {place?.name}
+                  </Text>
+                  <Text
+                    style={{ fontSize: 12, color: COLORS.n600, marginTop: 2 }}
+                    numberOfLines={1}
+                  >
+                    {place?.address}
+                  </Text>
+                </View>
+              </View>
+
+              {!type ? (
+                <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 8 }}>
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: COLORS.n600,
+                      marginBottom: 10,
+                    }}
+                  >
+                    What type of place is this?
+                  </Text>
+                  <View
+                    style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}
+                  >
+                    {TYPES.map((t) => (
+                      <Pressable
+                        key={t.key}
+                        onPress={() => setType(t.key)}
+                        style={({ pressed }) => ({
+                          flexBasis: "47%",
+                          flexGrow: 1,
+                          alignItems: "center",
+                          gap: 8,
+                          paddingVertical: 28,
+                          borderRadius: 16,
+                          borderWidth: 1,
+                          borderColor: COLORS.n200,
+                          backgroundColor: pressed
+                            ? COLORS.n100
+                            : COLORS.surface,
+                        })}
+                      >
+                        <Ionicons name={t.icon} size={26} color={COLORS.ink} />
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: "600",
+                            color: COLORS.ink,
+                          }}
+                        >
+                          {t.label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              ) : (
+                <>
+                  <ScrollView
+                    style={{ flex: 1 }}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{
+                      gap: 14,
+                      paddingHorizontal: 20,
+                      paddingTop: 8,
+                      paddingBottom: 20,
+                    }}
+                  >
+                    <Field
+                      label="Building name"
+                      value={form.buildingName}
+                      onChangeText={set("buildingName")}
+                      placeholder={
+                        type === "house"
+                          ? "House name or number"
+                          : "e.g. Palm Court"
+                      }
+                    />
+                    <View style={{ flexDirection: "row", gap: 12 }}>
+                      {type !== "house" && (
+                        <View style={{ flex: 1 }}>
+                          <Field
+                            label="Floor number"
+                            value={form.floor}
+                            onChangeText={set("floor")}
+                            placeholder="e.g. 3"
+                            keyboardType="number-pad"
+                          />
+                        </View>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Field
+                          label="Door number"
+                          value={form.doorNumber}
+                          onChangeText={set("doorNumber")}
+                          placeholder="e.g. 3B"
+                        />
+                      </View>
+                    </View>
+                    <Field
+                      label="Additional info"
+                      value={form.notes}
+                      onChangeText={set("notes")}
+                      placeholder="Landmark, gate color, directions…"
+                      multiline
+                    />
+                  </ScrollView>
+
+                  {/* Pinned footer */}
+                  <View
+                    style={{
+                      paddingHorizontal: 20,
+                      paddingTop: 12,
+                      paddingBottom: 12,
+                      borderTopWidth: 1,
+                      borderTopColor: COLORS.n200,
+                      backgroundColor: COLORS.surface,
+                    }}
+                  >
+                    <TouchableOpacity
+                      onPress={handleSave}
+                      disabled={!canSave}
+                      style={{
+                        backgroundColor: canSave ? COLORS.brand : COLORS.n200,
+                        borderRadius: 14,
+                        paddingVertical: 14,
+                        alignItems: "center",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: canSave ? "#FFF" : COLORS.n600,
+                          fontWeight: "700",
+                          fontSize: 14,
+                        }}
+                      >
+                        Save address
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+            </KeyboardAvoidingView>
+          </SafeAreaView>
+        </SafeAreaProvider>
+      </Modal>
     </SafeAreaView>
   );
 }

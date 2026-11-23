@@ -1,5 +1,4 @@
 import { AppText } from "@/components/app-text";
-
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -20,11 +19,12 @@ import { useCartStore } from "../../store/cartStore";
 import AddressModal from "@/components/address-modal";
 import { useAddresses } from "@/hooks/cravings-now-api/address-query";
 import { useCreateOrder } from "@/hooks/cravings-now-api/order-mutation";
-import { getCurrentCoords } from "@/lib/location";
 import { buildOrderPayload } from "@/lib/buildOrderPayload";
 import { useAuthStore } from "../../store/authStore";
 import * as Crypto from "expo-crypto";
 import Loading from "@/components/ui/loading";
+import { useUserLocation } from "@/hooks/location-provider";
+import InfoCard from "@/components/info-card";
 
 // ─── CravingsNow design tokens — from the style-guide cover frame ──────────
 // TODO: extract into a shared `@/constants/theme` file — duplicated across
@@ -51,60 +51,6 @@ function formatPrice(amount: number): string {
   return `₦${Math.round(amount)
     .toString()
     .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
-}
-
-interface InfoCardProps {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  subtitle: string;
-  onPress: () => void;
-}
-
-function InfoCard({ icon, title, subtitle, onPress }: InfoCardProps) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.7}
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        backgroundColor: COLORS.surface,
-        borderWidth: 1,
-        borderColor: COLORS.n200,
-        borderRadius: 14,
-        padding: 14,
-        marginTop: 12,
-      }}
-    >
-      <View
-        style={{
-          width: 34,
-          height: 34,
-          borderRadius: 10,
-          backgroundColor: COLORS.n100,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Ionicons name={icon} size={16} color={COLORS.ink} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <AppText
-          style={{ fontSize: 12.5, fontWeight: "700", color: COLORS.ink }}
-        >
-          {title}
-        </AppText>
-        <AppText
-          numberOfLines={1}
-          style={{ fontSize: 11, color: COLORS.n600, marginTop: 2 }}
-        >
-          {subtitle}
-        </AppText>
-      </View>
-      <Ionicons name="chevron-forward" size={16} color={COLORS.n200} />
-    </TouchableOpacity>
-  );
 }
 
 interface SummaryRowProps {
@@ -173,17 +119,18 @@ export default function CheckoutScreen() {
     taxKobo: number;
   }>();
 
-  const { data } = useAddresses();
-  // console.log(data);
-  const address = data?.[0];
+  // const { data } = useAddresses();
+  // // console.log(data);
+  // const address = data?.[0];
+  const { coords, status, openSettings, place } = useUserLocation();
 
   const { user } = useAuthStore();
 
   // console.log(user);
 
   const location = {
-    latitude: Number(address?.latitude),
-    longitude: Number(address?.longitude),
+    latitude: Number(coords?.lat),
+    longitude: Number(coords?.lng),
   };
 
   const createOrder = useCreateOrder();
@@ -207,6 +154,7 @@ export default function CheckoutScreen() {
         amount: total,
         idempotencyKey: idemKeyRef.current,
         customerEmail: user?.email ?? "",
+        customerId: user?.id ?? "",
       });
 
       const order = await createOrder.mutateAsync(payload);
@@ -222,14 +170,11 @@ export default function CheckoutScreen() {
       );
     }
   };
-  const [addressModalVisible, setAddressModalVisible] =
-    useState<boolean>(false);
 
   // TODO: AddressModal doesn't yet report back which address was picked —
   // it only closes itself on selection. Once addresses live in a shared
   // store/context, read the selected one from there instead of this local
   // placeholder.
-  const selectedAddressLabel = "Mobolaji Bank Anthony Way, 3a";
 
   // TODO: same gap on the payment side — no payment-method store/API yet,
   // so this is a static placeholder rather than a real selection.
@@ -383,10 +328,9 @@ export default function CheckoutScreen() {
 
         {/* ── Delivery address ── */}
         <InfoCard
+          title="Delivery Location"
           icon="location-outline"
-          title="Deliver to Home"
-          subtitle={selectedAddressLabel}
-          onPress={() => setAddressModalVisible(true)}
+          subtitle={place?.name!}
         />
 
         {/* ── Payment method ── */}
@@ -436,11 +380,6 @@ export default function CheckoutScreen() {
           )}
         </AppText>
       </TouchableOpacity>
-
-      <AddressModal
-        visible={addressModalVisible}
-        onClose={() => setAddressModalVisible(false)}
-      />
     </SafeAreaView>
   );
 }

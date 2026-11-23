@@ -7,6 +7,8 @@ import React, { useMemo } from "react";
 import { FlatList, Image, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useCartStore } from "../../store/cartStore";
+import { useListOrders } from "@/hooks/cravings-now-api/order-query";
+import { useAuthStore } from "@/store/authStore";
 
 // TODO: swap for `@/constants/theme` once the token migration happens.
 const COLORS = {
@@ -371,12 +373,14 @@ function EmptyOrders() {
 
 // ─── Screen ─────────────────────────────────────────────────────────────────
 export default function OrdersScreen() {
-  const { data, isPending } = useOrders();
-
+  const { user } = useAuthStore();
+  const userExist = user?.name !== null;
+  const { data, isPending } = useListOrders(!userExist, user?.id!);
+  console.log(data, user?.name);
   // Newest first, regardless of API ordering.
   const orders = useMemo(
     () =>
-      [...(data ?? [])].sort(
+      [...(data?.items ?? [])].sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       ),

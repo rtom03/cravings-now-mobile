@@ -13,7 +13,7 @@ import SafeModal from "./shared/safe-modal";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useAddresses } from "@/hooks/cravings-now-api/address-query";
-import { useUserLocation } from "@/hooks/use-user-location";
+import { useUserLocation } from "@/hooks/location-provider";
 
 // ─── CravingsNow design tokens ──────────────────────────────────────────────
 // TODO: extract into a shared `@/constants/theme` file — duplicated across
@@ -135,23 +135,12 @@ export default function AddressModal({
   const insets = useSafeAreaInsets();
   const { data: addresses } = useAddresses();
 
-  const { coords, setCoords, place, status } = useUserLocation();
+  const { coords, place, status } = useUserLocation();
 
   // console.log(addresses);
 
   // Only look up location while the modal is actually open, and guard
   // against setting state after it's been closed/unmounted mid-request.
-  useEffect(() => {
-    if (status !== "granted") return;
-    let sub: Location.LocationSubscription;
-    (async () => {
-      sub = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.Balanced, distanceInterval: 25 },
-        (p) => setCoords({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      );
-    })();
-    return () => sub?.remove();
-  }, [status]);
 
   // A real map image, centered on wherever `coords` currently points — the
   // pin overlay below is drawn on top and stays visually centered, which
